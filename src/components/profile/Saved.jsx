@@ -38,10 +38,7 @@ function Saved({
         pb-24
       "
     >
-
-      {/* HEADER */}
-
-      <div
+<div
         className="
           border-b
           border-gray-100
@@ -98,11 +95,7 @@ function Saved({
         </div>
 
       </div>
-
-
-      {/* EMPTY STATE */}
-
-      {places.length === 0 ? (
+{places.length === 0 ? (
 
         <div
           className="
@@ -220,20 +213,14 @@ function Saved({
               >
 
                 <div className="p-4">
-
-                  {/* TOP */}
-
-                  <div
+<div
                     className="
                       flex
                       items-center
                       gap-3
                     "
                   >
-
-                    {/* LOGO */}
-
-                    <div
+<div
                       className="
                         flex
                         h-14
@@ -269,11 +256,7 @@ function Saved({
                       )}
 
                     </div>
-
-
-                    {/* INFO */}
-
-                    <div className="min-w-0 flex-1">
+<div className="min-w-0 flex-1">
 
                       <h2
                         className="
@@ -330,11 +313,7 @@ function Saved({
                       </div>
 
                     </div>
-
-
-                    {/* HEART */}
-
-                    <button
+<button
                       onClick={() =>
                         handleRemove(place)
                       }
@@ -366,11 +345,7 @@ function Saved({
                     </button>
 
                   </div>
-
-
-                  {/* DESCRIPTION */}
-
-                  <p
+<p
                     className="
                       mt-3
                       line-clamp-2
@@ -381,11 +356,7 @@ function Saved({
                   >
                     {place.description}
                   </p>
-
-
-                  {/* ACTIONS */}
-
-                  <div
+<div
                     className="
                       mt-4
                       flex
@@ -469,11 +440,7 @@ function Saved({
         </div>
 
       )}
-
-
-      {/* CARD ANIMATIONS */}
-
-      <style>
+<style>
         {`
           @keyframes savedCardIn {
             from {

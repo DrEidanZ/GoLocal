@@ -47,10 +47,7 @@ function PlaceCard({
         "
       >
         <div className="relative p-4">
-
-          {/* CLOSE BUTTON */}
-
-          <button
+<button
             onClick={onClose}
             className="
               absolute
@@ -75,11 +72,7 @@ function PlaceCard({
               ×
             </span>
           </button>
-
-
-          {/* PLACE HEADER */}
-
-          <div
+<div
             className="
               flex
               items-center
@@ -87,10 +80,7 @@ function PlaceCard({
               pr-10
             "
           >
-
-            {/* LOGO */}
-
-            <div
+<div
               className="
                 flex
                 h-14
@@ -123,11 +113,7 @@ function PlaceCard({
                 />
               )}
             </div>
-
-
-            {/* NAME + RATING */}
-
-            <div className="min-w-0">
+<div className="min-w-0">
 
               <h2
                 className="
@@ -186,11 +172,7 @@ function PlaceCard({
             </div>
 
           </div>
-
-
-          {/* DESCRIPTION */}
-
-          <p
+<p
             className="
               mt-3
               text-sm
@@ -200,21 +182,14 @@ function PlaceCard({
           >
             {place.description}
           </p>
-
-
-          {/* ACTION BUTTONS */}
-
-          <div
+<div
             className="
               mt-4
               flex
               gap-2
             "
           >
-
-            {/* DIRECTIONS */}
-
-            <button
+<button
               onClick={() => {
                 const url =
                   `https://www.google.com/maps/dir/?api=1&destination=${place.coordinates[1]},${place.coordinates[0]}`;
@@ -246,11 +221,7 @@ function PlaceCard({
 
               Directions
             </button>
-
-
-            {/* ORDER */}
-
-            <button
+<button
               onClick={() => {
                 onOrder(place);
               }}
@@ -276,11 +247,7 @@ function PlaceCard({
 
               Order
             </button>
-
-
-            {/* SAVE */}
-
-            <button
+<button
               onClick={onSave}
               className={`
                 flex
@@ -319,11 +286,7 @@ function PlaceCard({
 
         </div>
       </div>
-
-
-      {/* PLACE CARD ARROW */}
-
-      <div
+<div
         className="
           absolute
           left-1/2

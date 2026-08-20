@@ -19,10 +19,7 @@ function SearchBar({
 
   return (
     <div className="relative w-full">
-
-      {/* SEARCH INPUT */}
-
-      <div
+<div
         className="
           flex
           items-center
@@ -63,11 +60,7 @@ function SearchBar({
             placeholder:text-gray-400
           "
         />
-
-
-        {/* CLEAR BUTTON */}
-
-        {searchText && (
+{searchText && (
           <button
             onClick={clearSearch}
             className="
@@ -93,11 +86,7 @@ function SearchBar({
         )}
 
       </div>
-
-
-      {/* SEARCH RESULTS */}
-
-      {searchText.trim() &&
+{searchText.trim() &&
         searchResults.length > 0 && (
 
           <div
@@ -146,10 +135,7 @@ function SearchBar({
                     active:bg-gray-100
                   "
                 >
-
-                  {/* PLACE ICON */}
-
-                  <div
+<div
                     className="
                       flex
                       h-11
@@ -187,11 +173,7 @@ function SearchBar({
                     )}
 
                   </div>
-
-
-                  {/* PLACE INFO */}
-
-                  <div className="min-w-0 flex-1">
+<div className="min-w-0 flex-1">
 
                     <p
                       className="
@@ -262,11 +244,7 @@ function SearchBar({
           </div>
 
         )}
-
-
-      {/* NO RESULTS */}
-
-      {searchText.trim() &&
+{searchText.trim() &&
         searchResults.length === 0 && (
 
           <div

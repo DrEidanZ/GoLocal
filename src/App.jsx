@@ -208,10 +208,7 @@ function App() {
         onPlacePositionChange={setPosition}
         resetMap={resetMap}
       />
-
-      {/* HEADER */}
-
-      <div
+<div
         className="
           absolute
           left-0
@@ -222,10 +219,7 @@ function App() {
       >
         <Header />
       </div>
-
-      {/* SEARCH */}
-
-      <div
+<div
         className="
           absolute
           left-4
@@ -241,10 +235,7 @@ function App() {
           onResultSelect={selectSearchResult}
         />
       </div>
-
-      {/* CATEGORIES */}
-
-      <div
+<div
         className="
           absolute
           left-0
@@ -258,10 +249,7 @@ function App() {
           setSelectedCategory={setCategory}
         />
       </div>
-
-      {/* PLACE CARD */}
-
-      <PlaceCard
+<PlaceCard
         place={place}
         position={position}
         isSaved={isSaved}
@@ -269,10 +257,7 @@ function App() {
         onSave={toggleSaved}
         onOrder={openOrderPanel}
       />
-
-      {/* ORDER PANEL */}
-
-      {orderPlace && (
+{orderPlace && (
         <OrderPanel
           place={orderPlace}
           onClose={closeOrderPanel}

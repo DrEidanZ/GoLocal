@@ -39,10 +39,7 @@ function Header({
         py-3
       "
     >
-
-      {/* GOLOCAL TEXT CARD */}
-
-      <div
+<div
         className="
           relative
           overflow-hidden
@@ -137,11 +134,7 @@ function Header({
         </div>
 
       </div>
-
-
-      {/* BUTTONS */}
-
-      <div
+<div
         className="
           relative
           z-30
@@ -149,10 +142,7 @@ function Header({
           gap-2
         "
       >
-
-        {/* NOTIFICATIONS */}
-
-        <button
+<button
           onClick={toggleNotifications}
           className="
             relative
@@ -196,11 +186,7 @@ function Header({
           )}
 
         </button>
-
-
-        {/* PROFILE */}
-
-        <button
+<button
           onClick={onProfile}
           className="
             relative
@@ -230,11 +216,7 @@ function Header({
           />
 
         </button>
-
-
-        {/* NOTIFICATION POPUP */}
-
-        {showNotifications && (
+{showNotifications && (
           <div
             className="
               absolute
@@ -250,10 +232,7 @@ function Header({
               shadow-2xl
             "
           >
-
-            {/* HEADER */}
-
-            <div
+<div
               className="
                 border-b
                 border-gray-100
@@ -273,11 +252,7 @@ function Header({
               </h2>
 
             </div>
-
-
-            {/* NOTIFICATIONS */}
-
-            {notifications.length > 0 ? (
+{notifications.length > 0 ? (
 
               <div
                 className="
@@ -425,11 +400,7 @@ function Header({
               </div>
 
             )}
-
-
-            {/* FOOTER */}
-
-            <div
+<div
               className="
                 border-t
                 border-gray-100

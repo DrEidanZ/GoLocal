@@ -82,10 +82,7 @@ function OrderPanel({
           shadow-2xl
         "
       >
-
-        {/* HEADER */}
-
-        <div
+<div
           className="
             flex
             items-center
@@ -152,11 +149,7 @@ function OrderPanel({
           )}
 
         </div>
-
-
-        {/* SUCCESS STATE */}
-
-        {isPlaced ? (
+{isPlaced ? (
 
           <div
             className="
@@ -243,10 +236,7 @@ function OrderPanel({
           /* ORDER CONTENT */
 
           <div className="p-4">
-
-            {/* ITEM */}
-
-            <div
+<div
               className="
                 flex
                 items-center
@@ -277,11 +267,7 @@ function OrderPanel({
                 </p>
 
               </div>
-
-
-              {/* QUANTITY */}
-
-              <div
+<div
                 className="
                   flex
                   shrink-0
@@ -354,11 +340,7 @@ function OrderPanel({
               </div>
 
             </div>
-
-
-            {/* DELIVERY */}
-
-            <div
+<div
               className="
                 mt-3
                 flex
@@ -389,11 +371,7 @@ function OrderPanel({
               </div>
 
             </div>
-
-
-            {/* PRICE */}
-
-            <div className="mt-4 space-y-2">
+<div className="mt-4 space-y-2">
 
               <div className="flex justify-between text-xs">
 
@@ -441,11 +419,7 @@ function OrderPanel({
               </div>
 
             </div>
-
-
-            {/* PROCEED */}
-
-            <button
+<button
               onClick={handleAdd}
               disabled={isPlacing}
               className="
@@ -496,11 +470,7 @@ function OrderPanel({
               )}
 
             </button>
-
-
-            {/* CANCEL */}
-
-            {!isPlacing && (
+{!isPlacing && (
               <button
                 onClick={onClose}
                 className="
@@ -527,11 +497,7 @@ function OrderPanel({
         )}
 
       </div>
-
-
-      {/* ANIMATIONS */}
-
-      <style>
+<style>
         {`
           @keyframes circleDraw {
             from {

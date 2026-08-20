@@ -33,10 +33,7 @@ function OrderDetails({
         pb-24
       "
     >
-
-      {/* HEADER */}
-
-      <div
+<div
         className="
           flex
           items-center
@@ -81,11 +78,7 @@ function OrderDetails({
         </h1>
 
       </div>
-
-
-      {/* PLACE */}
-
-      <div
+<div
         className="
           border-b
           border-gray-100
@@ -163,11 +156,7 @@ function OrderDetails({
         </div>
 
       </div>
-
-
-      {/* ITEM */}
-
-      <div className="p-4">
+<div className="p-4">
 
         <div
           className="
@@ -212,11 +201,7 @@ function OrderDetails({
               </p>
 
             </div>
-
-
-            {/* QUANTITY */}
-
-            <div
+<div
               className="
                 flex
                 items-center
@@ -290,11 +275,7 @@ function OrderDetails({
           </div>
 
         </div>
-
-
-        {/* DELIVERY */}
-
-        <div
+<div
           className="
             mt-3
             rounded-2xl
@@ -358,11 +339,7 @@ function OrderDetails({
           </div>
 
         </div>
-
-
-        {/* SUMMARY */}
-
-        <div
+<div
           className="
             mt-3
             rounded-2xl
@@ -457,11 +434,7 @@ function OrderDetails({
         </div>
 
       </div>
-
-
-      {/* CONFIRM BUTTON */}
-
-      <div
+<div
         className="
           fixed
           bottom-0

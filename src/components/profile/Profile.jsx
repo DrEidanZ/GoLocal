@@ -24,10 +24,7 @@ function Profile({
         pb-24
       "
     >
-
-      {/* PROFILE HEADER */}
-
-      <div
+<div
         className="
           relative
           overflow-hidden
@@ -116,11 +113,7 @@ function Profile({
           </div>
 
         </div>
-
-
-        {/* PROFILE CARD */}
-
-        <div
+<div
           className="
             relative
             mt-6
@@ -179,11 +172,7 @@ function Profile({
         </div>
 
       </div>
-
-
-      {/* STATS */}
-
-      <div
+<div
         className="
           grid
           grid-cols-2
@@ -304,11 +293,7 @@ function Profile({
         </div>
 
       </div>
-
-
-      {/* QUICK ACCESS */}
-
-      <div className="px-4 pt-5">
+<div className="px-4 pt-5">
 
         <div
           className="
@@ -348,10 +333,7 @@ function Profile({
             shadow-sm
           "
         >
-
-          {/* SAVED PLACES */}
-
-          <button
+<button
             onClick={onSaved}
             className="
               flex
@@ -431,11 +413,7 @@ function Profile({
 
 
           <div className="mx-4 border-t border-gray-100" />
-
-
-          {/* MY ORDERS */}
-
-          <button
+<button
             onClick={onOrders}
             className="
               flex
@@ -513,11 +491,7 @@ function Profile({
         </div>
 
       </div>
-
-
-      {/* PREFERENCES */}
-
-      <div className="px-4 pt-5">
+<div className="px-4 pt-5">
 
         <h2
           className="
@@ -542,10 +516,7 @@ function Profile({
             shadow-sm
           "
         >
-
-          {/* NOTIFICATIONS */}
-
-          <button
+<button
             className="
               flex
               w-full
@@ -615,11 +586,7 @@ function Profile({
 
 
           <div className="mx-4 border-t border-gray-100" />
-
-
-          {/* LOCATION */}
-
-          <button
+<button
             className="
               flex
               w-full
@@ -690,11 +657,7 @@ function Profile({
         </div>
 
       </div>
-
-
-      {/* FOOTER */}
-
-      <div
+<div
         className="
           px-4
           pb-6
@@ -724,11 +687,7 @@ function Profile({
         </p>
 
       </div>
-
-
-      {/* ANIMATION */}
-
-      <style>
+<style>
         {`
           @keyframes profileCardIn {
             from {

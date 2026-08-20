@@ -20,10 +20,7 @@ function Orders({
         pb-24
       "
     >
-
-      {/* HEADER */}
-
-      <div
+<div
         className="
           border-b
           border-gray-100
@@ -52,11 +49,7 @@ function Orders({
           Keep track of your GoLocal orders
         </p>
       </div>
-
-
-      {/* EMPTY STATE */}
-
-      {orders.length === 0 ? (
+{orders.length === 0 ? (
 
         <div
           className="
@@ -163,10 +156,7 @@ function Orders({
                     `${index * 0.08}s`,
                 }}
               >
-
-                {/* ORDER HEADER */}
-
-                <div className="p-4">
+<div className="p-4">
 
                   <div
                     className="
@@ -175,10 +165,7 @@ function Orders({
                       gap-3
                     "
                   >
-
-                    {/* LOGO */}
-
-                    <div
+<div
                       className="
                         flex
                         h-12
@@ -208,11 +195,7 @@ function Orders({
                         />
                       )}
                     </div>
-
-
-                    {/* NAME */}
-
-                    <div className="min-w-0 flex-1">
+<div className="min-w-0 flex-1">
 
                       <h2
                         className="
@@ -236,11 +219,7 @@ function Orders({
                       </p>
 
                     </div>
-
-
-                    {/* STATUS */}
-
-                    <div
+<div
                       className="
                         flex
                         shrink-0
@@ -269,11 +248,7 @@ function Orders({
                     </div>
 
                   </div>
-
-
-                  {/* ORDER TIME */}
-
-                  <div
+<div
                     className="
                       mt-3
                       flex
@@ -291,11 +266,7 @@ function Orders({
                   </div>
 
                 </div>
-
-
-                {/* PROGRESS */}
-
-                <div
+<div
                   className="
                     border-t
                     border-gray-100
@@ -310,10 +281,7 @@ function Orders({
                       items-center
                     "
                   >
-
-                    {/* STEP 1 */}
-
-                    <div
+<div
                       className="
                         flex
                         flex-col
@@ -346,11 +314,7 @@ function Orders({
                         Placed
                       </span>
                     </div>
-
-
-                    {/* LINE */}
-
-                    <div
+<div
                       className="
                         mb-5
                         h-0.5
@@ -358,11 +322,7 @@ function Orders({
                         bg-blue-500
                       "
                     />
-
-
-                    {/* STEP 2 */}
-
-                    <div
+<div
                       className="
                         flex
                         flex-col
@@ -395,11 +355,7 @@ function Orders({
                         Preparing
                       </span>
                     </div>
-
-
-                    {/* LINE */}
-
-                    <div
+<div
                       className="
                         mb-5
                         h-0.5
@@ -407,11 +363,7 @@ function Orders({
                         bg-gray-200
                       "
                     />
-
-
-                    {/* STEP 3 */}
-
-                    <div
+<div
                       className="
                         flex
                         flex-col
@@ -444,11 +396,7 @@ function Orders({
                         On the way
                       </span>
                     </div>
-
-
-                    {/* LINE */}
-
-                    <div
+<div
                       className="
                         mb-5
                         h-0.5
@@ -456,11 +404,7 @@ function Orders({
                         bg-gray-200
                       "
                     />
-
-
-                    {/* STEP 4 */}
-
-                    <div
+<div
                       className="
                         flex
                         flex-col
@@ -497,11 +441,7 @@ function Orders({
                   </div>
 
                 </div>
-
-
-                {/* DELIVERY */}
-
-                <div
+<div
                   className="
                     border-t
                     border-gray-100
@@ -556,11 +496,7 @@ function Orders({
                   </div>
 
                 </div>
-
-
-                {/* ORDER ITEM */}
-
-                <div
+<div
                   className="
                     border-t
                     border-gray-100
@@ -626,11 +562,7 @@ function Orders({
                   </div>
 
                 </div>
-
-
-                {/* SUMMARY */}
-
-                <div
+<div
                   className="
                     border-t
                     border-gray-100
@@ -723,11 +655,7 @@ function Orders({
                   </div>
 
                 </div>
-
-
-                {/* REMOVE */}
-
-                <div
+<div
                   className="
                     border-t
                     border-gray-100
@@ -773,11 +701,7 @@ function Orders({
 
         </div>
       )}
-
-
-      {/* CARD ANIMATION */}
-
-      <style>
+<style>
         {`
           @keyframes orderCardIn {
             from {

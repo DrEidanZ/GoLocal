@@ -41,10 +41,7 @@ function Checkout({
         pb-24
       "
     >
-
-      {/* HEADER */}
-
-      <div
+<div
         className="
           flex
           items-center
@@ -99,15 +96,8 @@ function Checkout({
         </div>
 
       </div>
-
-
-      {/* CONTENT */}
-
-      <div className="space-y-4 p-4">
-
-        {/* ORDER */}
-
-        <div
+<div className="space-y-4 p-4">
+<div
           className="
             rounded-2xl
             border
@@ -188,11 +178,7 @@ function Checkout({
           </div>
 
         </div>
-
-
-        {/* DELIVERY */}
-
-        <div
+<div
           className="
             rounded-2xl
             border
@@ -247,11 +233,7 @@ function Checkout({
           </div>
 
         </div>
-
-
-        {/* DELIVERY METHOD */}
-
-        <div
+<div
           className="
             rounded-2xl
             border
@@ -316,11 +298,7 @@ function Checkout({
           </div>
 
         </div>
-
-
-        {/* PAYMENT */}
-
-        <div
+<div
           className="
             rounded-2xl
             border
@@ -375,11 +353,7 @@ function Checkout({
           </div>
 
         </div>
-
-
-        {/* SUMMARY */}
-
-        <div
+<div
           className="
             rounded-2xl
             border
@@ -473,11 +447,7 @@ function Checkout({
           </div>
 
         </div>
-
-
-        {/* PLACE ORDER */}
-
-        <button
+<button
           onClick={handlePlaceOrder}
           className="
             flex
