@@ -1,11 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   LocateFixed,
+  Plus,
+  Minus,
   Utensils,
   Hotel,
   Package,
   Car,
+  Navigation,
 } from "lucide-react";
 
 import { renderToStaticMarkup } from "react-dom/server";
@@ -18,6 +21,11 @@ import PlaceCard from "../places/PlaceCard";
 import chowkingLogo from "../../assets/logos/chowking.png";
 import jollibeeLogo from "../../assets/logos/jollibee.png";
 
+const API_BASE_URL =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000"
+    : `http://${window.location.hostname}:5000`;
 
 const ORIGINAL_CENTER = [
   123.8854,
@@ -27,157 +35,11 @@ const ORIGINAL_CENTER = [
 const ORIGINAL_ZOOM = 13;
 const PLACE_ZOOM = 16;
 
+const LIGHT_MAP_STYLE =
+  "https://api.maptiler.com/maps/streets-v2/style.json";
 
-export const categoryPlaces = {
-  Food: [
-    {
-      name: "McDonald's",
-      coordinates: [123.8854, 10.3157],
-      rating: 4.6,
-      description:
-        "Burgers, fries, chicken, and more.",
-      logo: null,
-    },
-    {
-      name: "Jollibee",
-      coordinates: [123.892, 10.32],
-      rating: 4.7,
-      description:
-        "Filipino favorites and fast food.",
-      logo: jollibeeLogo,
-    },
-    {
-      name: "Starbucks",
-      coordinates: [123.878, 10.31],
-      rating: 4.5,
-      description:
-        "Coffee, pastries, and refreshing drinks.",
-      logo: null,
-    },
-    {
-      name: "Mang Inasal",
-      coordinates: [123.89, 10.316],
-      rating: 4.7,
-      description:
-        "Chicken inasal, rice meals, and Filipino food.",
-      logo: null,
-    },
-    {
-      name: "Chowking",
-      coordinates: [123.883, 10.322],
-      rating: 4.4,
-      description:
-        "Chinese-style Filipino fast food.",
-      logo: chowkingLogo,
-    },
-  ],
-
-  Hotels: [
-    {
-      name: "Cebu Grand Hotel",
-      coordinates: [123.89, 10.31],
-      rating: 4.5,
-      description:
-        "Comfortable rooms in the heart of the city.",
-      logo: null,
-    },
-    {
-      name: "Harbor View Hotel",
-      coordinates: [123.88, 10.32],
-      rating: 4.6,
-      description:
-        "Relaxing accommodation with city views.",
-      logo: null,
-    },
-    {
-      name: "City Garden Hotel",
-      coordinates: [123.895, 10.315],
-      rating: 4.4,
-      description:
-        "Modern rooms and convenient amenities.",
-      logo: null,
-    },
-    {
-      name: "Grand Central Suites",
-      coordinates: [123.884, 10.313],
-      rating: 4.7,
-      description:
-        "Stylish suites close to major attractions.",
-      logo: null,
-    },
-  ],
-
-  Delivery: [
-    {
-      name: "GoLocal Delivery",
-      coordinates: [123.885, 10.325],
-      rating: 4.8,
-      description:
-        "Fast and convenient local deliveries.",
-      logo: null,
-    },
-    {
-      name: "QuickDrop",
-      coordinates: [123.875, 10.315],
-      rating: 4.6,
-      description:
-        "Affordable same-day delivery service.",
-      logo: null,
-    },
-    {
-      name: "Dash Express",
-      coordinates: [123.9, 10.31],
-      rating: 4.7,
-      description:
-        "Fast delivery around the city.",
-      logo: null,
-    },
-    {
-      name: "CitySend",
-      coordinates: [123.892, 10.308],
-      rating: 4.5,
-      description:
-        "Local package and document delivery.",
-      logo: null,
-    },
-  ],
-
-  Rides: [
-    {
-      name: "GoLocal Rides",
-      coordinates: [123.882, 10.312],
-      rating: 4.9,
-      description:
-        "Convenient rides around the city.",
-      logo: null,
-    },
-    {
-      name: "CityCab",
-      coordinates: [123.89, 10.322],
-      rating: 4.7,
-      description:
-        "Reliable city transportation.",
-      logo: null,
-    },
-    {
-      name: "QuickRide",
-      coordinates: [123.9, 10.32],
-      rating: 4.8,
-      description:
-        "Fast rides whenever you need them.",
-      logo: null,
-    },
-    {
-      name: "Metro Transport",
-      coordinates: [123.878, 10.318],
-      rating: 4.6,
-      description:
-        "Affordable transportation around Cebu.",
-      logo: null,
-    },
-  ],
-};
-
+const DARK_MAP_STYLE =
+  "https://api.maptiler.com/maps/streets-v2-dark/style.json";
 
 const categoryIcons = {
   Food: Utensils,
@@ -186,6 +48,28 @@ const categoryIcons = {
   Rides: Car,
 };
 
+const categoryColors = {
+  Food: {
+    border: "#f97316",
+    text: "#f97316",
+    background: "#fff7ed",
+  },
+  Hotels: {
+    border: "#8b5cf6",
+    text: "#8b5cf6",
+    background: "#f5f3ff",
+  },
+  Delivery: {
+    border: "#22c55e",
+    text: "#22c55e",
+    background: "#f0fdf4",
+  },
+  Rides: {
+    border: "#3b82f6",
+    text: "#3b82f6",
+    background: "#eff6ff",
+  },
+};
 
 function MapView({
   selectedCategory,
@@ -197,11 +81,83 @@ function MapView({
   onSavePlace,
   isSaved = false,
   resetMap,
+  darkMode = false,
 }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef([]);
 
+  const [isAwayFromCenter, setIsAwayFromCenter] =
+    useState(false);
+
+  const [databaseRestaurants, setDatabaseRestaurants] =
+    useState([]);
+
+  const loadRestaurants = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/restaurants`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to fetch restaurants."
+        );
+      }
+
+      const restaurants = await response.json();
+
+      const formattedRestaurants =
+        restaurants.map((restaurant) => {
+          let logo = restaurant.logo || null;
+
+          if (restaurant.name === "Jollibee") {
+            logo = jollibeeLogo;
+          }
+
+          if (restaurant.name === "Chowking") {
+            logo = chowkingLogo;
+          }
+
+          return {
+            id: restaurant.id,
+            name: restaurant.name,
+            coordinates: [
+              Number(restaurant.longitude),
+              Number(restaurant.latitude),
+            ],
+            rating: restaurant.rating || 0,
+            description:
+              restaurant.description || "",
+            logo,
+            category:
+              restaurant.category || "Food",
+          };
+        });
+
+      setDatabaseRestaurants(
+        formattedRestaurants
+      );
+    } catch (error) {
+      console.error(
+        "Error loading restaurants:",
+        error
+      );
+    }
+  };
+
+  useEffect(() => {
+    loadRestaurants();
+
+    const interval = setInterval(
+      loadRestaurants,
+      5000
+    );
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
 
   const updatePlacePosition = () => {
     if (!map.current || !selectedPlace) {
@@ -218,6 +174,33 @@ function MapView({
     });
   };
 
+  const checkMapPosition = () => {
+    if (!map.current) {
+      return;
+    }
+
+    const center = map.current.getCenter();
+    const zoom = map.current.getZoom();
+
+    const longitudeDifference = Math.abs(
+      center.lng - ORIGINAL_CENTER[0]
+    );
+
+    const latitudeDifference = Math.abs(
+      center.lat - ORIGINAL_CENTER[1]
+    );
+
+    const zoomDifference = Math.abs(
+      zoom - ORIGINAL_ZOOM
+    );
+
+    const moved =
+      longitudeDifference > 0.002 ||
+      latitudeDifference > 0.002 ||
+      zoomDifference > 0.15;
+
+    setIsAwayFromCenter(moved);
+  };
 
   useEffect(() => {
     if (!mapContainer.current || map.current) {
@@ -229,8 +212,9 @@ function MapView({
 
     map.current = new maptilersdk.Map({
       container: mapContainer.current,
-      style:
-        "https://api.maptiler.com/maps/streets-v2/style.json",
+      style: darkMode
+        ? DARK_MAP_STYLE
+        : LIGHT_MAP_STYLE,
       center: ORIGINAL_CENTER,
       zoom: ORIGINAL_ZOOM,
       navigationControl: false,
@@ -239,12 +223,66 @@ function MapView({
       scaleControl: false,
     });
 
+    map.current.on(
+      "move",
+      checkMapPosition
+    );
+
+    map.current.on(
+      "zoom",
+      checkMapPosition
+    );
+
+    map.current.on(
+      "moveend",
+      checkMapPosition
+    );
+
     return () => {
       map.current?.remove();
       map.current = null;
     };
   }, []);
 
+  useEffect(() => {
+    if (!map.current) {
+      return;
+    }
+
+    const newStyle = darkMode
+      ? DARK_MAP_STYLE
+      : LIGHT_MAP_STYLE;
+
+    map.current.setStyle(newStyle);
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (!map.current || resetMap === 0) {
+      return;
+    }
+
+    map.current.flyTo({
+      center: ORIGINAL_CENTER,
+      zoom: ORIGINAL_ZOOM,
+      duration: 1000,
+      essential: true,
+    });
+
+    setIsAwayFromCenter(false);
+  }, [resetMap]);
+
+  useEffect(() => {
+    if (!map.current || !selectedPlace) {
+      return;
+    }
+
+    map.current.flyTo({
+      center: selectedPlace.coordinates,
+      zoom: PLACE_ZOOM,
+      duration: 1000,
+      essential: true,
+    });
+  }, [selectedPlace]);
 
   useEffect(() => {
     if (!map.current || !selectedPlace) {
@@ -266,21 +304,6 @@ function MapView({
     };
   }, [selectedPlace]);
 
-
-  useEffect(() => {
-    if (!map.current || resetMap === 0) {
-      return;
-    }
-
-    map.current.flyTo({
-      center: ORIGINAL_CENTER,
-      zoom: ORIGINAL_ZOOM,
-      duration: 1000,
-      essential: true,
-    });
-  }, [resetMap]);
-
-
   useEffect(() => {
     if (!map.current || !selectedCategory) {
       return;
@@ -297,70 +320,70 @@ function MapView({
       .toLowerCase();
 
     let places = [];
-    let activeCategory = selectedCategory;
 
     if (search) {
-      for (const [
-        category,
-        categoryList,
-      ] of Object.entries(categoryPlaces)) {
-        const matches = categoryList.filter(
-          (place) =>
-            place.name
-              .toLowerCase()
-              .includes(search) ||
-            place.description
-              .toLowerCase()
-              .includes(search)
-        );
-
-        if (matches.length > 0) {
-          places = matches;
-          activeCategory = category;
-          break;
-        }
-      }
-    } else {
-      places =
-        categoryPlaces[selectedCategory] || [];
-    }
-
-    const Icon =
-      categoryIcons[activeCategory];
-
-    if (!Icon) {
-      return;
-    }
-
-    const iconMarkup =
-      renderToStaticMarkup(
-        <Icon
-          size={22}
-          strokeWidth={2.2}
-        />
+      places = databaseRestaurants.filter(
+        (place) =>
+          place.name
+            .toLowerCase()
+            .includes(search) ||
+          place.description
+            .toLowerCase()
+            .includes(search)
       );
-
+    } else {
+      places = databaseRestaurants.filter(
+        (place) =>
+          place.category ===
+          selectedCategory
+      );
+    }
 
     places.forEach((place) => {
+      const activeCategory =
+        place.category || selectedCategory;
+
+      const Icon =
+        categoryIcons[activeCategory];
+
+      const colors =
+        categoryColors[activeCategory];
+
+      if (!Icon || !colors) {
+        return;
+      }
+
+      const iconMarkup =
+        renderToStaticMarkup(
+          <Icon
+            size={21}
+            strokeWidth={2.3}
+          />
+        );
+
       const markerElement =
         document.createElement("div");
 
       markerElement.innerHTML = `
         <div
           style="
-            width: 42px;
-            height: 42px;
-            background: white;
+            position: relative;
+            width: 44px;
+            height: 44px;
+            background: ${colors.background};
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 12px
-              rgba(0,0,0,0.25);
-            border: 3px solid #3b82f6;
-            color: #3b82f6;
+            box-shadow:
+              0 4px 12px rgba(0,0,0,0.22),
+              0 2px 4px rgba(0,0,0,0.12);
+            border: 3px solid ${colors.border};
+            color: ${colors.text};
             cursor: pointer;
-            transition: transform 0.2s ease;
+            transition:
+              transform 0.25s ease,
+              box-shadow 0.25s ease;
           "
         >
           ${iconMarkup}
@@ -369,7 +392,6 @@ function MapView({
 
       const circle =
         markerElement.firstElementChild;
-
 
       circle.animate(
         [
@@ -401,24 +423,32 @@ function MapView({
         }
       );
 
-
       markerElement.addEventListener(
         "mouseenter",
         () => {
           circle.style.transform =
             "scale(1.15)";
+
+          circle.style.boxShadow =
+            "0 7px 18px rgba(0,0,0,0.28)";
         }
       );
-
 
       markerElement.addEventListener(
         "mouseleave",
         () => {
-          circle.style.transform =
-            "scale(1)";
+          const isSelected =
+            selectedPlace?.id === place.id;
+
+          if (!isSelected) {
+            circle.style.transform =
+              "scale(1)";
+
+            circle.style.boxShadow =
+              "0 4px 12px rgba(0,0,0,0.22), 0 2px 4px rgba(0,0,0,0.12)";
+          }
         }
       );
-
 
       markerElement.addEventListener(
         "click",
@@ -441,7 +471,6 @@ function MapView({
         }
       );
 
-
       const marker =
         new maptilersdk.Marker({
           element: markerElement,
@@ -450,14 +479,13 @@ function MapView({
           .setLngLat(place.coordinates)
           .addTo(map.current);
 
-
       markers.current.push({
         marker,
         place,
         circle,
+        category: activeCategory,
       });
     });
-
 
     return () => {
       markers.current.forEach((item) => {
@@ -470,71 +498,253 @@ function MapView({
     selectedCategory,
     searchText,
     onPlaceSelect,
+    databaseRestaurants,
   ]);
-
 
   useEffect(() => {
     markers.current.forEach((item) => {
-      const { place, circle } = item;
+      const {
+        place,
+        circle,
+        category,
+      } = item;
 
       const isSelected =
-        selectedPlace?.name === place.name;
+        selectedPlace?.id === place.id;
 
-      if (isSelected && place.logo) {
-        circle.innerHTML = `
-          <img
-            src="${place.logo}"
-            alt="${place.name}"
-            style="
-              width: 36px;
-              height: 36px;
-              object-fit: contain;
-            "
-          />
-        `;
+      const colors =
+        categoryColors[category];
 
-        circle.style.width = "50px";
-        circle.style.height = "50px";
-        circle.style.transform =
-          "scale(1.12)";
-        circle.style.boxShadow =
-          "0 6px 18px rgba(0,0,0,0.30)";
-
+      if (!colors) {
         return;
       }
 
-      if (!isSelected) {
+      const existingPulse =
+        circle.querySelector(
+          ".marker-selection-pulse"
+        );
+
+      if (existingPulse) {
+        existingPulse.remove();
+      }
+
+      if (isSelected) {
+        if (place.logo) {
+          circle.innerHTML = `
+            <div
+              style="
+                position: relative;
+                width: 52px;
+                height: 52px;
+                background: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 3px solid ${colors.border};
+                box-shadow:
+                  0 7px 20px rgba(0,0,0,0.30),
+                  0 0 0 5px ${colors.border}22;
+                transform: scale(1.12);
+              "
+            >
+              <img
+                src="${place.logo}"
+                alt="${place.name}"
+                style="
+                  width: 36px;
+                  height: 36px;
+                  object-fit: contain;
+                "
+              />
+            </div>
+          `;
+
+          const selectedCircle =
+            circle.firstElementChild;
+
+          const selectedPulse =
+            document.createElement("div");
+
+          selectedPulse.className =
+            "marker-selection-pulse";
+
+          selectedPulse.style.position =
+            "absolute";
+          selectedPulse.style.inset = "-8px";
+          selectedPulse.style.borderRadius =
+            "50%";
+          selectedPulse.style.border =
+            `2px solid ${colors.border}`;
+          selectedPulse.style.pointerEvents =
+            "none";
+          selectedPulse.style.opacity = "0";
+
+          selectedCircle.appendChild(
+            selectedPulse
+          );
+
+          selectedPulse.animate(
+            [
+              {
+                transform: "scale(0.82)",
+                opacity: 0.7,
+              },
+              {
+                transform: "scale(1.2)",
+                opacity: 0,
+              },
+            ],
+            {
+              duration: 1500,
+              iterations: Infinity,
+              easing: "ease-out",
+            }
+          );
+
+          return;
+        }
+
         const Icon =
-          categoryIcons[selectedCategory];
+          categoryIcons[category];
 
         if (Icon) {
           circle.innerHTML =
             renderToStaticMarkup(
               <Icon
-                size={22}
-                strokeWidth={2.2}
+                size={23}
+                strokeWidth={2.4}
               />
             );
         }
+
+        circle.style.width = "52px";
+        circle.style.height = "52px";
+        circle.style.background =
+          colors.background;
+        circle.style.border =
+          `3px solid ${colors.border}`;
+        circle.style.color =
+          colors.text;
+        circle.style.transform =
+          "scale(1.12)";
+        circle.style.boxShadow =
+          `0 7px 20px rgba(0,0,0,0.30), 0 0 0 5px ${colors.border}22`;
+
+        const selectedPulse =
+          document.createElement("div");
+
+        selectedPulse.className =
+          "marker-selection-pulse";
+
+        selectedPulse.style.position =
+          "absolute";
+        selectedPulse.style.inset = "-8px";
+        selectedPulse.style.borderRadius =
+          "50%";
+        selectedPulse.style.border =
+          `2px solid ${colors.border}`;
+        selectedPulse.style.pointerEvents =
+          "none";
+        selectedPulse.style.opacity = "0";
+
+        circle.appendChild(
+          selectedPulse
+        );
+
+        selectedPulse.animate(
+          [
+            {
+              transform: "scale(0.82)",
+              opacity: 0.7,
+            },
+            {
+              transform: "scale(1.2)",
+              opacity: 0,
+            },
+          ],
+          {
+            duration: 1500,
+            iterations: Infinity,
+            easing: "ease-out",
+          }
+        );
+
+        return;
       }
 
-      circle.style.width = "42px";
-      circle.style.height = "42px";
-      circle.style.transform = "scale(1)";
+      const Icon =
+        categoryIcons[category];
+
+      if (Icon) {
+        circle.innerHTML =
+          renderToStaticMarkup(
+            <Icon
+              size={21}
+              strokeWidth={2.3}
+            />
+          );
+      }
+
+      circle.style.width = "44px";
+      circle.style.height = "44px";
+      circle.style.background =
+        colors.background;
+      circle.style.border =
+        `3px solid ${colors.border}`;
+      circle.style.color =
+        colors.text;
+      circle.style.transform =
+        "scale(1)";
       circle.style.boxShadow =
-        "0 4px 12px rgba(0,0,0,0.25)";
+        "0 4px 12px rgba(0,0,0,0.22), 0 2px 4px rgba(0,0,0,0.12)";
     });
   }, [
     selectedPlace,
     selectedCategory,
   ]);
 
+  const zoomIn = () => {
+    if (!map.current) {
+      return;
+    }
+
+    map.current.zoomIn({
+      duration: 250,
+    });
+  };
+
+  const zoomOut = () => {
+    if (!map.current) {
+      return;
+    }
+
+    map.current.zoomOut({
+      duration: 250,
+    });
+  };
+
+  const recenterMap = () => {
+    if (!map.current) {
+      return;
+    }
+
+    map.current.flyTo({
+      center: ORIGINAL_CENTER,
+      zoom: ORIGINAL_ZOOM,
+      duration: 700,
+      essential: true,
+    });
+
+    setIsAwayFromCenter(false);
+  };
 
   const locateUser = () => {
     if (!navigator.geolocation) {
       alert(
         "Your device does not support location services."
       );
+
       return;
     }
 
@@ -579,23 +789,94 @@ function MapView({
     );
   };
 
-
   return (
     <div className="absolute inset-0 h-full w-full">
-
       <div
         ref={mapContainer}
         className="absolute inset-0 h-full w-full"
       />
 
-
-      <button
-        onClick={locateUser}
+      <div
         className="
           absolute
-          bottom-40
+          bottom-[225px]
           right-4
-          z-40
+          z-[30]
+          flex
+          flex-col
+          overflow-hidden
+          rounded-2xl
+          border
+          border-gray-100
+          bg-white
+          shadow-lg
+          dark:border-gray-700
+          dark:bg-gray-900
+          sm:bottom-40
+        "
+      >
+        <button
+          onClick={zoomIn}
+          className="
+            flex
+            h-11
+            w-11
+            items-center
+            justify-center
+            text-gray-700
+            transition-all
+            duration-150
+            hover:bg-gray-50
+            hover:text-blue-500
+            active:scale-90
+            dark:text-gray-200
+            dark:hover:bg-gray-800
+            dark:hover:text-blue-400
+          "
+          aria-label="Zoom in"
+        >
+          <Plus
+            size={21}
+            strokeWidth={2.2}
+          />
+        </button>
+
+        <div className="mx-2 border-t border-gray-100 dark:border-gray-700" />
+
+        <button
+          onClick={zoomOut}
+          className="
+            flex
+            h-11
+            w-11
+            items-center
+            justify-center
+            text-gray-700
+            transition-all
+            duration-150
+            hover:bg-gray-50
+            hover:text-blue-500
+            active:scale-90
+            dark:text-gray-200
+            dark:hover:bg-gray-800
+            dark:hover:text-blue-400
+          "
+          aria-label="Zoom out"
+        >
+          <Minus
+            size={21}
+            strokeWidth={2.2}
+          />
+        </button>
+      </div>
+
+      <button
+        onClick={recenterMap}
+        className={`
+          absolute
+          bottom-[155px]
+          left-4
+          z-[30]
           flex
           h-12
           w-12
@@ -614,6 +895,53 @@ function MapView({
           hover:shadow-xl
           active:scale-90
           active:shadow-sm
+          dark:border-gray-700
+          dark:bg-gray-900
+          dark:text-gray-200
+          sm:bottom-28
+          ${
+            isAwayFromCenter
+              ? "pointer-events-auto scale-100 opacity-100"
+              : "pointer-events-none scale-75 opacity-0"
+          }
+        `}
+        aria-label="Recenter map"
+      >
+        <Navigation
+          size={21}
+          strokeWidth={2.2}
+        />
+      </button>
+
+      <button
+        onClick={locateUser}
+        className="
+          absolute
+          bottom-[155px]
+          right-4
+          z-[30]
+          flex
+          h-12
+          w-12
+          items-center
+          justify-center
+          rounded-full
+          border
+          border-gray-100
+          bg-white
+          text-gray-700
+          shadow-lg
+          transition-all
+          duration-200
+          hover:scale-105
+          hover:text-blue-500
+          hover:shadow-xl
+          active:scale-90
+          active:shadow-sm
+          dark:border-gray-700
+          dark:bg-gray-900
+          dark:text-gray-200
+          sm:bottom-28
         "
         aria-label="Locate me"
       >
@@ -622,7 +950,6 @@ function MapView({
           strokeWidth={2.2}
         />
       </button>
-
 
       <PlaceCard
         place={selectedPlace}
@@ -638,10 +965,8 @@ function MapView({
         onClose={onClosePlace}
         onSave={onSavePlace}
       />
-
     </div>
   );
 }
-
 
 export default MapView;

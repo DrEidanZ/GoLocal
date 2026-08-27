@@ -15,8 +15,7 @@ function Saved({
   onSelect,
   onRemove,
 }) {
-  const [removingPlace, setRemovingPlace] =
-    useState(null);
+  const [removingPlace, setRemovingPlace] = useState(null);
 
   const handleRemove = (place) => {
     if (removingPlace) return;
@@ -30,178 +29,57 @@ function Saved({
   };
 
   return (
-    <div
-      className="
-        min-h-screen
-        w-full
-        bg-gray-50
-        pb-24
-      "
-    >
-<div
-        className="
-          border-b
-          border-gray-100
-          bg-white
-          px-5
-          py-5
-        "
-      >
-
+    <div className="min-h-screen w-full bg-gray-50 pb-24 dark:bg-gray-950">
+      <div className="border-b border-gray-100 bg-white px-5 py-5 dark:border-gray-800 dark:bg-gray-900">
         <div className="flex items-center gap-3">
-
-          <div
-            className="
-              flex
-              h-11
-              w-11
-              items-center
-              justify-center
-              rounded-2xl
-              bg-red-50
-              text-red-500
-            "
-          >
-            <Heart
-              size={21}
-              fill="currentColor"
-            />
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-500 dark:bg-red-950/40">
+            <Heart size={21} fill="currentColor" />
           </div>
 
           <div>
-
-            <h1
-              className="
-                text-2xl
-                font-bold
-                text-gray-900
-              "
-            >
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Saved Places
             </h1>
 
-            <p
-              className="
-                mt-0.5
-                text-sm
-                text-gray-500
-              "
-            >
+            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               Your favorite places in one spot
             </p>
-
           </div>
-
         </div>
-
       </div>
-{places.length === 0 ? (
 
-        <div
-          className="
-            flex
-            min-h-[70vh]
-            flex-col
-            items-center
-            justify-center
-            px-6
-            text-center
-          "
-        >
-
-          <div
-            className="
-              flex
-              h-20
-              w-20
-              items-center
-              justify-center
-              rounded-full
-              bg-red-50
-              text-red-400
-            "
-          >
+      {places.length === 0 ? (
+        <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-red-400 dark:bg-red-950/40">
             <Bookmark size={34} />
           </div>
 
-          <h2
-            className="
-              mt-5
-              text-xl
-              font-bold
-              text-gray-900
-            "
-          >
+          <h2 className="mt-5 text-xl font-bold text-gray-900 dark:text-white">
             Nothing saved yet
           </h2>
 
-          <p
-            className="
-              mt-2
-              max-w-sm
-              text-sm
-              leading-6
-              text-gray-500
-            "
-          >
-            Save your favorite restaurants,
-            hotels, and places to find them
+          <p className="mt-2 max-w-sm text-sm leading-6 text-gray-500 dark:text-gray-400">
+            Save your favorite restaurants, hotels, and places to find them
             quickly later.
           </p>
 
           <button
             onClick={onExplore}
-            className="
-              mt-5
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              bg-blue-500
-              px-5
-              py-3
-              text-sm
-              font-bold
-              text-white
-              shadow-sm
-              transition
-              duration-200
-              hover:bg-blue-600
-              active:scale-95
-            "
+            className="mt-5 flex items-center gap-2 rounded-xl bg-blue-500 px-5 py-3 text-sm font-bold text-white shadow-sm transition duration-200 hover:bg-blue-600 active:scale-95"
           >
             Explore Places
-
             <ArrowRight size={16} />
           </button>
-
         </div>
-
       ) : (
-
-        /* SAVED PLACES */
-
         <div className="space-y-3 p-4">
-
           {places.map((place, index) => {
-
-            const isRemoving =
-              removingPlace === place.name;
+            const isRemoving = removingPlace === place.name;
 
             return (
               <div
                 key={place.name}
-                className="
-                  overflow-hidden
-                  rounded-2xl
-                  border
-                  border-gray-100
-                  bg-white
-                  shadow-sm
-                  transition
-                  duration-200
-                  hover:shadow-md
-                "
+                className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
                 style={{
                   animation: isRemoving
                     ? "savedCardOut 0.45s ease-in forwards"
@@ -211,236 +89,89 @@ function Saved({
                     : `${index * 0.07}s`,
                 }}
               >
-
                 <div className="p-4">
-<div
-                    className="
-                      flex
-                      items-center
-                      gap-3
-                    "
-                  >
-<div
-                      className="
-                        flex
-                        h-14
-                        w-14
-                        shrink-0
-                        items-center
-                        justify-center
-                        overflow-hidden
-                        rounded-2xl
-                        bg-gray-50
-                      "
-                    >
-
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-50 dark:bg-gray-800">
                       {place.logo ? (
-
                         <img
                           src={place.logo}
                           alt={place.name}
-                          className="
-                            h-10
-                            w-10
-                            object-contain
-                          "
+                          className="h-10 w-10 object-contain"
                         />
-
                       ) : (
-
                         <MapPin
                           size={25}
                           className="text-blue-500"
                         />
-
                       )}
-
                     </div>
-<div className="min-w-0 flex-1">
 
-                      <h2
-                        className="
-                          truncate
-                          text-base
-                          font-bold
-                          text-gray-900
-                        "
-                      >
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-base font-bold text-gray-900 dark:text-white">
                         {place.name}
                       </h2>
 
-                      <div
-                        className="
-                          mt-1
-                          flex
-                          items-center
-                          gap-1.5
-                        "
-                      >
-
-                        <span
-                          className="
-                            text-xs
-                            font-medium
-                            text-gray-500
-                          "
-                        >
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                           {place.category}
                         </span>
 
-                        <span className="text-gray-300">
+                        <span className="text-gray-300 dark:text-gray-600">
                           •
                         </span>
 
                         <Star
                           size={12}
-                          className="
-                            fill-yellow-400
-                            text-yellow-400
-                          "
+                          className="fill-yellow-400 text-yellow-400"
                         />
 
-                        <span
-                          className="
-                            text-xs
-                            font-semibold
-                            text-gray-600
-                          "
-                        >
+                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
                           {place.rating}
                         </span>
-
                       </div>
-
                     </div>
-<button
-                      onClick={() =>
-                        handleRemove(place)
-                      }
+
+                    <button
+                      onClick={() => handleRemove(place)}
                       disabled={!!removingPlace}
-                      className="
-                        flex
-                        h-9
-                        w-9
-                        shrink-0
-                        items-center
-                        justify-center
-                        rounded-full
-                        bg-red-50
-                        text-red-500
-                        transition
-                        duration-150
-                        hover:bg-red-100
-                        active:scale-90
-                        disabled:cursor-wait
-                      "
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500 transition duration-150 hover:bg-red-100 active:scale-90 disabled:cursor-wait dark:bg-red-950/40 dark:hover:bg-red-950/60"
                       aria-label={`Remove ${place.name} from saved`}
                     >
-
-                      <Heart
-                        size={17}
-                        fill="currentColor"
-                      />
-
+                      <Heart size={17} fill="currentColor" />
                     </button>
-
                   </div>
-<p
-                    className="
-                      mt-3
-                      line-clamp-2
-                      text-xs
-                      leading-5
-                      text-gray-500
-                    "
-                  >
+
+                  <p className="mt-3 line-clamp-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
                     {place.description}
                   </p>
-<div
-                    className="
-                      mt-4
-                      flex
-                      gap-2
-                    "
-                  >
 
+                  <div className="mt-4 flex gap-2">
                     <button
-                      onClick={() =>
-                        onSelect(place)
-                      }
+                      onClick={() => onSelect(place)}
                       disabled={!!removingPlace}
-                      className="
-                        flex
-                        flex-1
-                        items-center
-                        justify-center
-                        gap-2
-                        rounded-xl
-                        bg-blue-500
-                        px-4
-                        py-2.5
-                        text-xs
-                        font-bold
-                        text-white
-                        transition
-                        duration-200
-                        hover:bg-blue-600
-                        active:scale-95
-                        disabled:opacity-60
-                      "
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-xs font-bold text-white transition duration-200 hover:bg-blue-600 active:scale-95 disabled:opacity-60"
                     >
-
                       <MapPin size={15} />
-
                       View Place
-
                     </button>
-
 
                     <button
-                      onClick={() =>
-                        handleRemove(place)
-                      }
+                      onClick={() => handleRemove(place)}
                       disabled={!!removingPlace}
-                      className="
-                        flex
-                        items-center
-                        justify-center
-                        gap-2
-                        rounded-xl
-                        bg-gray-50
-                        px-4
-                        py-2.5
-                        text-xs
-                        font-semibold
-                        text-gray-500
-                        transition
-                        duration-200
-                        hover:bg-red-50
-                        hover:text-red-500
-                        active:scale-95
-                        disabled:cursor-wait
-                      "
+                      className="flex items-center justify-center gap-2 rounded-xl bg-gray-50 px-4 py-2.5 text-xs font-semibold text-gray-500 transition duration-200 hover:bg-red-50 hover:text-red-500 active:scale-95 disabled:cursor-wait dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                     >
-
                       <Trash2 size={15} />
-
                       Remove
-
                     </button>
-
                   </div>
-
                 </div>
-
               </div>
             );
           })}
-
         </div>
-
       )}
-<style>
+
+      <style>
         {`
           @keyframes savedCardIn {
             from {
@@ -478,7 +209,6 @@ function Saved({
           }
         `}
       </style>
-
     </div>
   );
 }
