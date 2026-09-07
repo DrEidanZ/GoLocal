@@ -6,10 +6,26 @@ import {
 } from "lucide-react";
 
 const navigation = [
-  { icon: Compass, label: "Explore" },
-  { icon: Package, label: "Orders" },
-  { icon: Heart, label: "Saved" },
-  { icon: User, label: "Profile" },
+  {
+    icon: Compass,
+    label: "Explore",
+    value: "explore",
+  },
+  {
+    icon: Package,
+    label: "Orders",
+    value: "orders",
+  },
+  {
+    icon: Heart,
+    label: "Saved",
+    value: "saved",
+  },
+  {
+    icon: User,
+    label: "Profile",
+    value: "profile",
+  },
 ];
 
 function BottomNav({ activeTab, setActiveTab }) {
@@ -37,13 +53,16 @@ function BottomNav({ activeTab, setActiveTab }) {
       <div className="mx-auto flex max-w-lg items-center justify-around">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.label;
+          const isActive =
+            activeTab === item.value;
 
           return (
             <button
-              key={item.label}
+              key={item.value}
               type="button"
-              onClick={() => setActiveTab(item.label)}
+              onClick={() =>
+                setActiveTab(item.value)
+              }
               className={`
                 relative
                 flex
@@ -102,11 +121,17 @@ function BottomNav({ activeTab, setActiveTab }) {
               >
                 <Icon
                   size={20}
-                  strokeWidth={isActive ? 2.5 : 2}
+                  strokeWidth={
+                    isActive ? 2.5 : 2
+                  }
                   className={`
                     transition-transform
                     duration-200
-                    ${isActive ? "scale-110" : ""}
+                    ${
+                      isActive
+                        ? "scale-110"
+                        : ""
+                    }
                   `}
                 />
               </span>

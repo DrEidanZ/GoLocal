@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -15,32 +14,67 @@ import MapView from "./components/map/MapView";
 
 import PlaceCard from "./components/places/PlaceCard";
 import OrderPanel from "./components/orders/OrderPanel";
+import Orders from "./components/orders/Orders";
 
 import Profile from "./components/profile/Profile";
 import Saved from "./components/profile/Saved";
-import Orders from "./components/orders/Orders";
-
 import AdminRestaurants from "./components/admin/AdminRestaurants";
+
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 import {
   CheckCircle,
   X,
 } from "lucide-react";
 
+const API_URL = "http://localhost:5000";
+
 function App() {
+  const [user, setUser] = useState(() => {
+    const savedUser =
+      localStorage.getItem("golocal-user");
+
+    return savedUser
+      ? JSON.parse(savedUser)
+      : null;
+  });
+
+  const [showRegister, setShowRegister] =
+    useState(false);
+
   const [category, setCategory] =
     useState("Food");
 
   const [search, setSearch] =
     useState("");
 
-  const [tab, setTab] =
-    useState("Explore");
+  const [tab, setTab] = useState(() => {
+    const savedTab =
+      localStorage.getItem(
+        "golocal-active-tab"
+      );
 
-  const [place, setPlace] =
+    const validTabs = [
+      "explore",
+      "orders",
+      "saved",
+      "profile",
+      "admin",
+    ];
+
+    return validTabs.includes(savedTab)
+      ? savedTab
+      : "explore";
+  });
+
+  const [selectedPlace, setSelectedPlace] =
     useState(null);
 
   const [position, setPosition] =
+    useState(null);
+
+  const [cardPosition, setCardPosition] =
     useState(null);
 
   const [orderPlace, setOrderPlace] =
@@ -50,35 +84,16 @@ function App() {
     useState([]);
 
   const [saved, setSaved] = useState(() => {
-    try {
-      const storedSaved =
-        localStorage.getItem(
-          "golocal-saved"
-        );
+    const stored =
+      localStorage.getItem("golocal-saved");
 
-      return storedSaved
-        ? JSON.parse(storedSaved)
-        : [];
-    } catch {
-      return [];
-    }
+    return stored
+      ? JSON.parse(stored)
+      : [];
   });
 
   const [orders, setOrders] =
-    useState(() => {
-      try {
-        const storedOrders =
-          localStorage.getItem(
-            "golocal-orders"
-          );
-
-        return storedOrders
-          ? JSON.parse(storedOrders)
-          : [];
-      } catch {
-        return [];
-      }
-    });
+    useState([]);
 
   const [notifications, setNotifications] =
     useState([]);
@@ -92,17 +107,13 @@ function App() {
   const [resetMap, setResetMap] =
     useState(0);
 
-  const [darkMode, setDarkMode] =
-    useState(() => {
-      return (
-        localStorage.getItem(
-          "golocal-theme"
-        ) === "dark"
-      );
-    });
-
-  const popupTimer = useRef(null);
-  const popupFadeTimer = useRef(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    return (
+      localStorage.getItem(
+        "golocal-dark-mode"
+      ) === "true"
+    );
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle(
@@ -111,12 +122,146 @@ function App() {
     );
 
     localStorage.setItem(
-      "golocal-theme",
-      darkMode
-        ? "dark"
-        : "light"
+      "golocal-dark-mode",
+      darkMode ? "true" : "false"
     );
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "golocal-active-tab",
+      tab
+    );
+  }, [tab]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const fetchRestaurants = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/api/restaurants`
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Failed to fetch restaurants."
+          );
+        }
+
+        const data =
+          await response.json();
+
+        setRestaurants((currentRestaurants) => {
+          const currentData =
+            JSON.stringify(
+              currentRestaurants
+            );
+
+          const newData =
+            JSON.stringify(data);
+
+          if (currentData === newData) {
+            return currentRestaurants;
+          }
+
+          return data;
+        });
+      } catch (error) {
+        console.error(
+          "Error fetching restaurants:",
+          error
+        );
+      }
+    };
+
+    fetchRestaurants();
+
+    const interval = setInterval(
+      fetchRestaurants,
+      5000
+    );
+
+    return () =>
+      clearInterval(interval);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+
+    const fetchMyOrders = async () => {
+      try {
+        const token =
+          localStorage.getItem(
+            "golocal-token"
+          );
+
+        if (!token) {
+          console.error(
+            "No authentication token found."
+          );
+
+          setOrders([]);
+          return;
+        }
+
+        const response = await fetch(
+          `${API_URL}/api/orders/my`,
+          {
+            method: "GET",
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+              "Failed to fetch orders."
+          );
+        }
+
+        const normalizedOrders =
+          data
+            .map((order) =>
+              normalizeOrder(
+                order,
+                restaurants
+              )
+            )
+            .filter(Boolean);
+
+        setOrders(
+          normalizedOrders
+        );
+      } catch (error) {
+        console.error(
+          "Error fetching orders:",
+          error
+        );
+      }
+    };
+
+    fetchMyOrders();
+
+    const interval = setInterval(
+      fetchMyOrders,
+      5000
+    );
+
+    return () =>
+      clearInterval(interval);
+  }, [user, restaurants]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -132,786 +277,366 @@ function App() {
     );
   }, [orders]);
 
-  useEffect(() => {
-    const loadRestaurants = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:5000/api/restaurants"
-        );
+  const handleLogin = (loggedInUser) => {
+    setUser(loggedInUser);
+    setShowRegister(false);
+    setTab("explore");
 
-        if (!response.ok) {
-          throw new Error(
-            "Failed to fetch restaurants."
-          );
-        }
+    localStorage.setItem(
+      "golocal-active-tab",
+      "explore"
+    );
+  };
 
-        const data =
-          await response.json();
+  const handleRegister = (registeredUser) => {
+    setUser(registeredUser);
+    setShowRegister(false);
+    setTab("explore");
 
-        const formatted =
-          data.map((restaurant) => ({
-            id: restaurant.id,
-            name: restaurant.name,
-            description:
-              restaurant.description || "",
-            category:
-              restaurant.category || "Food",
-            coordinates: [
-              Number(
-                restaurant.longitude
-              ),
-              Number(
-                restaurant.latitude
-              ),
-            ],
-            logo:
-              restaurant.logo || "",
-            rating:
-              restaurant.rating || 0,
-          }));
+    localStorage.setItem(
+      "golocal-active-tab",
+      "explore"
+    );
+  };
 
-        setRestaurants(formatted);
-      } catch (error) {
-        console.error(
-          "Error loading restaurants:",
-          error
-        );
-      }
+  const handleUserUpdate = (
+    updatedUser
+  ) => {
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "golocal-user",
+      JSON.stringify(
+        updatedUser
+      )
+    );
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(
+      "golocal-token"
+    );
+
+    localStorage.removeItem(
+      "golocal-user"
+    );
+
+    localStorage.setItem(
+      "golocal-active-tab",
+      "explore"
+    );
+
+    setUser(null);
+    setOrders([]);
+    setShowRegister(false);
+    setSelectedPlace(null);
+    setCardPosition(null);
+    setOrderPlace(null);
+    setTab("explore");
+  };
+
+  const addNotification = (message) => {
+    const notification = {
+      id: Date.now(),
+      message,
     };
 
-    loadRestaurants();
-
-    const interval =
-      setInterval(
-        loadRestaurants,
-        5000
-      );
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (popupTimer.current) {
-        clearTimeout(
-          popupTimer.current
-        );
-      }
-
-      if (popupFadeTimer.current) {
-        clearTimeout(
-          popupFadeTimer.current
-        );
-      }
-    };
-  }, []);
-
-  const addNotification =
-    useCallback(
-      (notification) => {
-        setNotifications(
-          (current) => [
-            {
-              id:
-                Date.now() +
-                Math.random(),
-              ...notification,
-            },
-            ...current,
-          ]
-        );
-      },
-      []
-    );
-
-  const closeDeliveryPopup =
-    useCallback(() => {
-      setPopupVisible(false);
-
-      if (popupTimer.current) {
-        clearTimeout(
-          popupTimer.current
-        );
-      }
-
-      if (popupFadeTimer.current) {
-        clearTimeout(
-          popupFadeTimer.current
-        );
-      }
-
-      popupFadeTimer.current =
-        setTimeout(() => {
-          setDeliveryPopup(null);
-        }, 350);
-    }, []);
-
-  const showDeliveryPopup =
-    useCallback(
-      (order) => {
-        if (popupTimer.current) {
-          clearTimeout(
-            popupTimer.current
-          );
-        }
-
-        if (popupFadeTimer.current) {
-          clearTimeout(
-            popupFadeTimer.current
-          );
-        }
-
-        setDeliveryPopup({
-          id:
-            Date.now() +
-            Math.random(),
-          name:
-            order.name ||
-            "Your order",
-          item:
-            order.item ||
-            "Your order",
-        });
-
-        setPopupVisible(true);
-
-        popupTimer.current =
-          setTimeout(() => {
-            setPopupVisible(false);
-
-            popupFadeTimer.current =
-              setTimeout(() => {
-                setDeliveryPopup(null);
-              }, 350);
-          }, 4500);
-      },
-      []
-    );
-
-  const toggleDarkMode =
-    useCallback(() => {
-      setDarkMode(
-        (value) => !value
-      );
-    }, []);
-
-  const results = search.trim()
-    ? restaurants
-        .filter((item) => {
-          const text =
-            search
-              .trim()
-              .toLowerCase();
-
-          return (
-            item.name
-              .toLowerCase()
-              .includes(text) ||
-            item.description
-              .toLowerCase()
-              .includes(text)
-          );
-        })
-        .slice(0, 6)
-    : [];
-
-  const selectPlace =
-    useCallback(
-      (item) => {
-        setPlace(item);
-        setTab("Explore");
-      },
-      []
-    );
-
-  const selectSearchResult =
-    useCallback(
-      (item) => {
-        setCategory(
-          item.category
-        );
-
-        setSearch("");
-
-        setPlace(item);
-
-        setTab("Explore");
-      },
-      []
-    );
-
-  const closePlace =
-    useCallback(() => {
-      setPlace(null);
-      setPosition(null);
-      setSearch("");
-
-      setResetMap(
-        (value) => value + 1
-      );
-    }, []);
-
-  const toggleSaved =
-    useCallback(() => {
-      if (!place) return;
-
-      setSaved((current) => {
-        const exists =
-          current.some(
-            (item) =>
-              item.name ===
-              place.name
-          );
-
-        if (exists) {
-          addNotification({
-            type: "removed",
-            title:
-              "Removed from saved",
-            message: `${place.name} was removed from your saved places.`,
-          });
-
-          return current.filter(
-            (item) =>
-              item.name !==
-              place.name
-          );
-        }
-
-        addNotification({
-          type: "saved",
-          title: "Place saved",
-          message: `${place.name} was added to your saved places.`,
-        });
-
-        return [
-          ...current,
-          place,
-        ];
-      });
-    }, [
-      place,
-      addNotification,
+    setNotifications((current) => [
+      notification,
+      ...current,
     ]);
+  };
 
-  const removeSavedPlace =
-    useCallback(
-      (item) => {
-        setSaved((current) =>
-          current.filter(
-            (place) =>
-              place.name !==
-              item.name
-          )
+  const closeDeliveryPopup = () => {
+    setPopupVisible(false);
+
+    setTimeout(() => {
+      setDeliveryPopup(null);
+    }, 200);
+  };
+
+  const showDeliveryPopup = (place) => {
+    setDeliveryPopup(place);
+    setPopupVisible(true);
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode((current) => !current);
+  };
+
+  const toggleSaved = (place) => {
+    setSaved((currentSaved) => {
+      const exists = currentSaved.some(
+        (item) => item.id === place.id
+      );
+
+      if (exists) {
+        return currentSaved.filter(
+          (item) => item.id !== place.id
         );
+      }
 
-        addNotification({
-          type: "removed",
-          title:
-            "Place removed",
-          message: `${item.name} was removed from your saved places.`,
-        });
-      },
-      [addNotification]
-    );
+      return [
+        ...currentSaved,
+        place,
+      ];
+    });
+  };
 
-  const openOrderPanel =
-    useCallback((item) => {
-      setOrderPlace(item);
-    }, []);
+  const handlePlaceSelect = useCallback(
+    (place) => {
+      if (!place) {
+        return;
+      }
 
-  const closeOrderPanel =
-    useCallback(() => {
-      setOrderPlace(null);
-    }, []);
+      const latitude = Number(
+        place.latitude ??
+          place.lat
+      );
 
-  const createOrder =
-    useCallback(
-      (order) => {
-        const now =
-          Date.now();
+      const longitude = Number(
+        place.longitude ??
+          place.lng
+      );
 
-        const newOrder = {
-          id:
-            order.id || now,
+      const hasCoordinates =
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude);
 
-          name:
-            order.place,
-
-          category:
-            order.category ||
-            "Food",
-
-          logo:
-            order.logo,
-
-          item:
-            order.item ||
-            "Food order",
-
-          price:
-            order.price ||
-            "₱99",
-
-          quantity:
-            order.quantity ||
-            1,
-
-          status:
-            "Placed",
-
-          statusType:
-            "active",
-
-          time:
-            "Just now",
-
-          address:
-            order.address ||
-            "Your delivery address",
-
-          createdAt:
-            now,
-
-          statusChangedAt:
-            now,
-        };
-
-        setOrders(
-          (current) => [
-            newOrder,
-            ...current,
-          ]
-        );
-
-        addNotification({
-          type: "order",
-          title:
-            "Order placed",
-          message: `${newOrder.name} order has been placed.`,
-        });
-
-        setOrderPlace(null);
-        setPlace(null);
-        setPosition(null);
-        setSearch("");
-        setTab("Orders");
-      },
-      [addNotification]
-    );
-
-  useEffect(() => {
-    const updateOrders =
-      () => {
-        const now =
-          Date.now();
-
-        setOrders(
-          (current) => {
-            let changed =
-              false;
-
-            const updated =
-              current.map(
-                (order) => {
-                  if (
-                    order.status ===
-                    "Delivered"
-                  ) {
-                    return order;
-                  }
-
-                  const createdAt =
-                    order.createdAt ||
-                    order.statusChangedAt ||
-                    now;
-
-                  const elapsed =
-                    now -
-                    createdAt;
-
-                  let nextStatus =
-                    "Placed";
-
-                  if (
-                    elapsed >=
-                    17000
-                  ) {
-                    nextStatus =
-                      "Delivered";
-                  } else if (
-                    elapsed >=
-                    9000
-                  ) {
-                    nextStatus =
-                      "On the way";
-                  } else if (
-                    elapsed >=
-                    3000
-                  ) {
-                    nextStatus =
-                      "Preparing";
-                  }
-
-                  if (
-                    nextStatus ===
-                    order.status
-                  ) {
-                    return order;
-                  }
-
-                  changed =
-                    true;
-
-                  if (
-                    nextStatus ===
-                    "Preparing"
-                  ) {
-                    addNotification({
-                      type: "order",
-                      title:
-                        "Order preparing",
-                      message: `${order.name} is now being prepared.`,
-                    });
-                  }
-
-                  if (
-                    nextStatus ===
-                    "On the way"
-                  ) {
-                    addNotification({
-                      type: "order",
-                      title:
-                        "Order on the way",
-                      message: `Your ${order.name} order is now on the way.`,
-                    });
-                  }
-
-                  if (
-                    nextStatus ===
-                    "Delivered"
-                  ) {
-                    addNotification({
-                      type: "order",
-                      title:
-                        "Order delivered",
-                      message: `Your ${order.name} order has been delivered.`,
-                    });
-
-                    setTimeout(
-                      () => {
-                        showDeliveryPopup(
-                          order
-                        );
-                      },
-                      0
-                    );
-                  }
-
-                  return {
-                    ...order,
-                    status:
-                      nextStatus,
-                    statusChangedAt:
-                      now,
-                    statusType:
-                      nextStatus ===
-                      "Delivered"
-                        ? "completed"
-                        : "active",
-                  };
-                }
-              );
-
-            return changed
-              ? updated
-              : current;
-          }
-        );
+      const normalizedPlace = {
+        ...place,
+        coordinates:
+          place.coordinates ||
+          (hasCoordinates
+            ? [
+                longitude,
+                latitude,
+              ]
+            : undefined),
+        category:
+          place.category || "Food",
       };
 
-    const interval =
-      setInterval(
-        updateOrders,
-        100
+      setSelectedPlace(
+        normalizedPlace
       );
 
-    return () => {
-      clearInterval(
-        interval
-      );
-    };
-  }, [
-    addNotification,
-    showDeliveryPopup,
-  ]);
-
-  const updateOrderQuantity =
-    useCallback(
-      (
-        orderId,
-        change
-      ) => {
-        setOrders(
-          (current) =>
-            current.map(
-              (order) => {
-                if (
-                  order.id !==
-                  orderId
-                ) {
-                  return order;
-                }
-
-                const newQuantity =
-                  (order.quantity ||
-                    1) +
-                  change;
-
-                return {
-                  ...order,
-                  quantity:
-                    Math.max(
-                      1,
-                      newQuantity
-                    ),
-                };
-              }
-            )
-        );
-      },
-      []
-    );
-
-  const removeOrder =
-    useCallback(
-      (orderId) => {
-        const order =
-          orders.find(
-            (item) =>
-              item.id ===
-              orderId
-          );
-
-        setOrders(
-          (current) =>
-            current.filter(
-              (item) =>
-                item.id !==
-                orderId
-            )
-        );
-
-        if (order) {
-          addNotification({
-            type: "removed",
-            title:
-              "Order removed",
-            message: `${order.name} was removed from your orders.`,
-          });
-        }
-      },
-      [
-        orders,
-        addNotification,
-      ]
-    );
-
-  const isSaved = place
-    ? saved.some(
-        (item) =>
-          item.name ===
-          place.name
-      )
-    : false;
-
-  const changeTab =
-    useCallback(
-      (nextTab) => {
-        setTab(nextTab);
-
-        if (
-          nextTab !==
-          "Explore"
-        ) {
-          setPlace(null);
-          setPosition(null);
-          setSearch("");
-          setOrderPlace(null);
-        }
-      },
-      []
-    );
-
-  const selectSavedPlace =
-    useCallback(
-      (item) => {
+      if (normalizedPlace.category) {
         setCategory(
-          item.category
+          normalizedPlace.category
         );
-
-        setPlace(item);
-
-        setTab("Explore");
-      },
-      []
-    );
-
-  const explore = (
-    <div className="absolute inset-0 overflow-hidden">
-      <MapView
-        selectedCategory={
-          category
-        }
-        searchText={search}
-        onPlaceSelect={
-          selectPlace
-        }
-        selectedPlace={
-          place
-        }
-        onPlacePositionChange={
-          setPosition
-        }
-        resetMap={resetMap}
-        darkMode={darkMode}
-      />
-
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10">
-        <div className="pointer-events-auto">
-          <Header
-            darkMode={
-              darkMode
-            }
-            onToggleDarkMode={
-              toggleDarkMode
-            }
-            onProfile={() =>
-              changeTab(
-                "Profile"
-              )
-            }
-            notifications={
-              notifications
-            }
-          />
-        </div>
-      </div>
-
-      <div className="absolute left-4 right-4 top-[76px] z-40 sm:left-6 sm:right-6">
-        <SearchBar
-          searchText={search}
-          setSearchText={
-            setSearch
-          }
-          searchResults={
-            results
-          }
-          onResultSelect={
-            selectSearchResult
-          }
-        />
-      </div>
-
-      <div className="absolute left-0 right-0 top-[136px] z-30">
-        <CategoryBar
-          selectedCategory={
-            category
-          }
-          setSelectedCategory={
-            setCategory
-          }
-        />
-      </div>
-
-      <PlaceCard
-        place={place}
-        position={position}
-        isSaved={isSaved}
-        onClose={closePlace}
-        onSave={toggleSaved}
-        onOrder={
-          openOrderPanel
-        }
-      />
-
-      {orderPlace && (
-        <OrderPanel
-          place={orderPlace}
-          onClose={
-            closeOrderPanel
-          }
-          onAdd={createOrder}
-        />
-      )}
-    </div>
+      }
+    },
+    []
   );
 
-  let page = explore;
+  const handleCardPositionChange =
+    useCallback((nextPosition) => {
+      setCardPosition(nextPosition);
+    }, []);
 
-  if (tab === "Saved") {
-    page = (
-      <Saved
-        places={saved}
-        onExplore={() =>
-          changeTab(
-            "Explore"
-          )
-        }
-        onSelect={
-          selectSavedPlace
-        }
-        onRemove={
-          removeSavedPlace
-        }
-      />
+  const handleClosePlaceCard = () => {
+    setSelectedPlace(null);
+    setCardPosition(null);
+
+    setResetMap((current) =>
+      current + 1
     );
-  }
+  };
 
-  if (tab === "Profile") {
-    page = (
-      <Profile
-        savedCount={
-          saved.length
-        }
-        orderCount={
-          orders.length
-        }
-        onSaved={() =>
-          changeTab("Saved")
-        }
-        onOrders={() =>
-          changeTab("Orders")
-        }
-        onAdmin={() =>
-          changeTab("Admin")
-        }
-      />
-    );
-  }
+  const handleOrder = (place) => {
+    setOrderPlace(place);
+  };
 
-  if (tab === "Orders") {
-    page = (
-      <Orders
-        orders={orders}
-        onRemove={
-          removeOrder
-        }
-        onUpdateStatus={() => {}}
-        onUpdateQuantity={
-          updateOrderQuantity
-        }
-      />
-    );
-  }
+  const createOrder = async (
+    place,
+    quantity = 1
+  ) => {
+    try {
+      const token =
+        localStorage.getItem(
+          "golocal-token"
+        );
 
-  if (tab === "Admin") {
-    page = (
-      <AdminRestaurants
-        onBack={() =>
-          changeTab("Profile")
+      if (!token) {
+        throw new Error(
+          "You are not logged in."
+        );
+      }
+
+      const price =
+        Number(place.price) || 99;
+
+      const deliveryFee = 49;
+
+      const subtotal =
+        price * quantity;
+
+      const total =
+        subtotal + deliveryFee;
+
+      const itemName =
+        place.item ||
+        "Food order";
+
+      const items = [
+        {
+          name: itemName,
+          quantity,
+          price,
+        },
+      ];
+
+      const response = await fetch(
+        `${API_URL}/api/orders`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+            Authorization:
+              `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            restaurantId:
+              place.id,
+            restaurantName:
+              place.name,
+            items,
+            total,
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to create order."
+        );
+      }
+
+      const backendOrder =
+        normalizeOrder(
+          data.order,
+          restaurants
+        );
+
+      setOrders((currentOrders) => [
+        backendOrder,
+        ...currentOrders,
+      ]);
+
+      setOrderPlace(null);
+
+      addNotification(
+        `Order placed at ${place.name}.`
+      );
+
+      return backendOrder;
+    } catch (error) {
+      console.error(
+        "Error creating order:",
+        error
+      );
+
+      addNotification(
+        error.message ||
+          "Failed to place order."
+      );
+    }
+  };
+
+  const removeOrder = async (
+    orderId
+  ) => {
+    try {
+      const token =
+        localStorage.getItem(
+          "golocal-token"
+        );
+
+      if (!token) {
+        throw new Error(
+          "You are not logged in."
+        );
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/orders/${orderId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to remove order."
+        );
+      }
+
+      setOrders((currentOrders) =>
+        currentOrders.filter(
+          (order) =>
+            order.id !== orderId
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Error removing order:",
+        error
+      );
+
+      addNotification(
+        error.message ||
+          "Failed to remove order."
+      );
+    }
+  };
+
+  const searchResults = restaurants
+    .filter((restaurant) => {
+      if (!search.trim()) {
+        return true;
+      }
+
+      return restaurant.name
+        ?.toLowerCase()
+        .includes(
+          search
+            .trim()
+            .toLowerCase()
+        );
+    })
+    .slice(0, 10);
+
+  if (!user) {
+    if (showRegister) {
+      return (
+        <Register
+          onRegister={handleRegister}
+          onBackToLogin={() =>
+            setShowRegister(false)
+          }
+        />
+      );
+    }
+
+    return (
+      <Login
+        onLogin={handleLogin}
+        onRegister={() =>
+          setShowRegister(true)
         }
       />
     );
@@ -919,117 +644,341 @@ function App() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gray-50 dark:bg-gray-950">
-      {page}
+      <div
+        className={
+          tab === "explore"
+            ? "absolute inset-0"
+            : "pointer-events-none absolute inset-0 opacity-0"
+        }
+      >
+        <MapView
+          category={category}
+          selectedPlace={
+            selectedPlace
+          }
+          onPlaceSelect={
+            handlePlaceSelect
+          }
+          position={position}
+          setPosition={setPosition}
+          cardPosition={
+            cardPosition
+          }
+          onCardPositionChange={
+            handleCardPositionChange
+          }
+          resetMap={resetMap}
+          restaurants={
+            restaurants
+          }
+          darkMode={darkMode}
+          isVisible={
+            tab === "explore"
+          }
+        />
 
-      {tab !== "Admin" && (
+        <div className="absolute left-0 right-0 top-0 z-40">
+          <Header
+            notifications={
+              notifications
+            }
+            onNotifications={() =>
+              setNotifications([])
+            }
+            onProfile={() =>
+              setTab("profile")
+            }
+            darkMode={darkMode}
+            onToggleDarkMode={
+              toggleDarkMode
+            }
+          />
+
+          <SearchBar
+            search={search}
+            setSearch={setSearch}
+            results={
+              searchResults
+            }
+            onSelectPlace={
+              handlePlaceSelect
+            }
+          />
+
+          <CategoryBar
+            category={category}
+            setCategory={setCategory}
+          />
+        </div>
+
+        {selectedPlace &&
+          cardPosition && (
+            <PlaceCard
+              place={selectedPlace}
+              position={cardPosition}
+              isSaved={saved.some(
+                (item) =>
+                  item.id ===
+                  selectedPlace.id
+              )}
+              onSave={() =>
+                toggleSaved(
+                  selectedPlace
+                )
+              }
+              onOrder={() =>
+                handleOrder(
+                  selectedPlace
+                )
+              }
+              onClose={
+                handleClosePlaceCard
+              }
+            />
+          )}
+
+        {orderPlace && (
+          <OrderPanel
+            place={orderPlace}
+            onClose={() =>
+              setOrderPlace(null)
+            }
+            onOrder={createOrder}
+          />
+        )}
+      </div>
+
+      {tab === "orders" && (
+        <Orders
+          orders={orders}
+          onRemove={removeOrder}
+          onBack={() =>
+            setTab("explore")
+          }
+        />
+      )}
+
+      {tab === "saved" && (
+        <Saved
+          saved={saved}
+          onRemove={(place) =>
+            toggleSaved(place)
+          }
+          onSelectPlace={
+            handlePlaceSelect
+          }
+          onBack={() =>
+            setTab("explore")
+          }
+        />
+      )}
+
+      {tab === "profile" && (
+        <Profile
+          user={user}
+          savedCount={saved.length}
+          orderCount={orders.length}
+          onSaved={() =>
+            setTab("saved")
+          }
+          onOrders={() =>
+            setTab("orders")
+          }
+          onAdmin={() =>
+            setTab("admin")
+          }
+          onLogout={handleLogout}
+          onUserUpdate={
+            handleUserUpdate
+          }
+        />
+      )}
+
+      {tab === "admin" && (
+        <AdminRestaurants
+          restaurants={
+            restaurants
+          }
+          onBack={() =>
+            setTab("profile")
+          }
+        />
+      )}
+
+      {tab !== "admin" && (
         <BottomNav
           activeTab={tab}
-          setActiveTab={
-            changeTab
-          }
+          setActiveTab={setTab}
         />
       )}
 
       {deliveryPopup && (
         <div
-          className={`
-            fixed
-            bottom-20
-            right-4
-            z-[9999]
-            w-[calc(100%-2rem)]
-            max-w-sm
-            transition-all
-            duration-350
-            sm:bottom-5
-            sm:right-5
-            ${
-              popupVisible
-                ? "translate-x-0 opacity-100"
-                : "translate-x-6 opacity-0"
-            }
-          `}
+          className={`fixed inset-0 z-[100] flex items-end justify-center bg-black/40 px-4 pb-6 transition-opacity duration-200 ${
+            popupVisible
+              ? "opacity-100"
+              : "pointer-events-none opacity-0"
+          }`}
+          onClick={
+            closeDeliveryPopup
+          }
         >
           <div
-            className="
-              flex
-              items-center
-              gap-3
-              rounded-2xl
-              border
-              border-green-100
-              bg-white
-              px-4
-              py-3.5
-              shadow-2xl
-              dark:border-green-900/50
-              dark:bg-gray-900
-            "
+            className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl dark:bg-gray-900"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
           >
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                shrink-0
-                items-center
-                justify-center
-                rounded-full
-                bg-green-100
-                text-green-600
-                dark:bg-green-950/50
-                dark:text-green-400
-              "
-            >
-              <CheckCircle
-                size={22}
-                strokeWidth={2.5}
-              />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-950/40 dark:text-green-400">
+                  <CheckCircle
+                    size={21}
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    Delivery
+                  </p>
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {deliveryPopup.name}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={
+                  closeDeliveryPopup
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-gray-900 dark:text-white">
-                Order delivered!
-              </p>
-
-              <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
-                {deliveryPopup.name}
-                {" · "}
-                {deliveryPopup.item}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={
-                closeDeliveryPopup
-              }
-              aria-label="Dismiss delivery notification"
-              className="
-                flex
-                h-7
-                w-7
-                shrink-0
-                items-center
-                justify-center
-                rounded-full
-                text-gray-400
-                transition
-                duration-200
-                hover:bg-gray-100
-                hover:text-gray-600
-                active:scale-90
-                dark:hover:bg-gray-800
-                dark:hover:text-gray-200
-              "
-            >
-              <X size={16} />
-            </button>
+            <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+              Your delivery request has been received.
+            </p>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+function normalizeOrder(
+  order,
+  restaurants = []
+) {
+  if (!order) {
+    return null;
+  }
+
+  let items = [];
+
+  try {
+    if (Array.isArray(order.items)) {
+      items = order.items;
+    } else if (
+      typeof order.items === "string"
+    ) {
+      items =
+        JSON.parse(order.items);
+    }
+  } catch (error) {
+    console.error(
+      "Failed to parse order items:",
+      error
+    );
+
+    items = [];
+  }
+
+  const firstItem =
+    items[0] || {};
+
+  const restaurant =
+    restaurants.find(
+      (item) =>
+        String(item.id) ===
+        String(
+          order.restaurantId
+        )
+    );
+
+  const quantity =
+    Number(
+      firstItem.quantity
+    ) || 1;
+
+  const unitPrice =
+    Number(
+      firstItem.price
+    ) || 99;
+
+  const deliveryFee = 49;
+
+  const subtotal =
+    unitPrice * quantity;
+
+  const backendTotal =
+    Number(order.total);
+
+  return {
+    id: order.id,
+
+    placeId:
+      order.restaurantId,
+
+    name:
+      order.restaurantName ||
+      restaurant?.name ||
+      "Restaurant",
+
+    category:
+      restaurant?.category ||
+      "Food",
+
+    logo:
+      restaurant?.logo ||
+      "",
+
+    item:
+      firstItem.name ||
+      "Food order",
+
+    quantity,
+
+    unitPrice,
+
+    subtotal,
+
+    deliveryFee,
+
+    total:
+      Number.isFinite(
+        backendTotal
+      )
+        ? backendTotal
+        : subtotal +
+          deliveryFee,
+
+    status:
+      order.status ||
+      "Placed",
+
+    createdAt:
+      order.createdAt,
+
+    address:
+      order.address ||
+      "",
+
+    restaurantId:
+      order.restaurantId,
+  };
 }
 
 export default App;

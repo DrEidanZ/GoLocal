@@ -3,3 +3,4 @@ backend/golocal.db-shm
 backend/golocal.db-wal
 backend/node_modules/
 node_modules/
+backend/.env

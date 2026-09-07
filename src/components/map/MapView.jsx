@@ -16,16 +16,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import * as maptilersdk from "@maptiler/sdk";
 import "@maptiler/sdk/dist/maptiler-sdk.css";
 
-import PlaceCard from "../places/PlaceCard";
-
 import chowkingLogo from "../../assets/logos/chowking.png";
 import jollibeeLogo from "../../assets/logos/jollibee.png";
-
-const API_BASE_URL =
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
-    ? "http://localhost:5000"
-    : `http://${window.location.hostname}:5000`;
 
 const ORIGINAL_CENTER = [
   123.8854,
@@ -72,137 +64,34 @@ const categoryColors = {
 };
 
 function MapView({
-  selectedCategory,
-  searchText,
+  category,
+  search = "",
   onPlaceSelect,
   selectedPlace,
-  onPlacePositionChange,
-  onClosePlace,
-  onSavePlace,
-  isSaved = false,
+  position,
+  setPosition,
+  cardPosition,
+  onCardPositionChange,
   resetMap,
+  restaurants = [],
   darkMode = false,
+  isVisible = true,
 }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef([]);
+  const cleanupTimer = useRef(null);
+  const userMarker = useRef(null);
 
   const [isAwayFromCenter, setIsAwayFromCenter] =
     useState(false);
 
-  const [databaseRestaurants, setDatabaseRestaurants] =
-    useState([]);
-
-  const loadRestaurants = async () => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/restaurants`
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to fetch restaurants."
-        );
-      }
-
-      const restaurants = await response.json();
-
-      const formattedRestaurants =
-        restaurants.map((restaurant) => {
-          let logo = restaurant.logo || null;
-
-          if (restaurant.name === "Jollibee") {
-            logo = jollibeeLogo;
-          }
-
-          if (restaurant.name === "Chowking") {
-            logo = chowkingLogo;
-          }
-
-          return {
-            id: restaurant.id,
-            name: restaurant.name,
-            coordinates: [
-              Number(restaurant.longitude),
-              Number(restaurant.latitude),
-            ],
-            rating: restaurant.rating || 0,
-            description:
-              restaurant.description || "",
-            logo,
-            category:
-              restaurant.category || "Food",
-          };
-        });
-
-      setDatabaseRestaurants(
-        formattedRestaurants
-      );
-    } catch (error) {
-      console.error(
-        "Error loading restaurants:",
-        error
-      );
-    }
-  };
-
   useEffect(() => {
-    loadRestaurants();
-
-    const interval = setInterval(
-      loadRestaurants,
-      5000
-    );
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-
-  const updatePlacePosition = () => {
-    if (!map.current || !selectedPlace) {
-      return;
+    if (cleanupTimer.current) {
+      clearTimeout(cleanupTimer.current);
+      cleanupTimer.current = null;
     }
 
-    const point = map.current.project(
-      selectedPlace.coordinates
-    );
-
-    onPlacePositionChange({
-      x: point.x,
-      y: point.y,
-    });
-  };
-
-  const checkMapPosition = () => {
-    if (!map.current) {
-      return;
-    }
-
-    const center = map.current.getCenter();
-    const zoom = map.current.getZoom();
-
-    const longitudeDifference = Math.abs(
-      center.lng - ORIGINAL_CENTER[0]
-    );
-
-    const latitudeDifference = Math.abs(
-      center.lat - ORIGINAL_CENTER[1]
-    );
-
-    const zoomDifference = Math.abs(
-      zoom - ORIGINAL_ZOOM
-    );
-
-    const moved =
-      longitudeDifference > 0.002 ||
-      latitudeDifference > 0.002 ||
-      zoomDifference > 0.15;
-
-    setIsAwayFromCenter(moved);
-  };
-
-  useEffect(() => {
     if (!mapContainer.current || map.current) {
       return;
     }
@@ -210,41 +99,262 @@ function MapView({
     maptilersdk.config.apiKey =
       "0Ou1wc3v64cLkxstebAo";
 
-    map.current = new maptilersdk.Map({
-      container: mapContainer.current,
-      style: darkMode
-        ? DARK_MAP_STYLE
-        : LIGHT_MAP_STYLE,
-      center: ORIGINAL_CENTER,
-      zoom: ORIGINAL_ZOOM,
-      navigationControl: false,
-      geolocateControl: false,
-      fullscreenControl: false,
-      scaleControl: false,
-    });
+    const mapInstance =
+      new maptilersdk.Map({
+        container: mapContainer.current,
+        style: darkMode
+          ? DARK_MAP_STYLE
+          : LIGHT_MAP_STYLE,
+        center: ORIGINAL_CENTER,
+        zoom: ORIGINAL_ZOOM,
+        navigationControl: false,
+        geolocateControl: false,
+        fullscreenControl: false,
+        scaleControl: false,
+      });
 
-    map.current.on(
+    map.current = mapInstance;
+
+    const checkMapPosition = () => {
+      if (!map.current) {
+        return;
+      }
+
+      const center =
+        map.current.getCenter();
+
+      const zoom =
+        map.current.getZoom();
+
+      const longitudeDifference =
+        Math.abs(
+          center.lng -
+            ORIGINAL_CENTER[0]
+        );
+
+      const latitudeDifference =
+        Math.abs(
+          center.lat -
+            ORIGINAL_CENTER[1]
+        );
+
+      const zoomDifference =
+        Math.abs(
+          zoom -
+            ORIGINAL_ZOOM
+        );
+
+      const moved =
+        longitudeDifference > 0.002 ||
+        latitudeDifference > 0.002 ||
+        zoomDifference > 0.15;
+
+      setIsAwayFromCenter(moved);
+    };
+
+    mapInstance.on(
       "move",
       checkMapPosition
     );
 
-    map.current.on(
+    mapInstance.on(
       "zoom",
       checkMapPosition
     );
 
-    map.current.on(
+    mapInstance.on(
       "moveend",
       checkMapPosition
     );
 
+    mapInstance.on("load", () => {
+      if (!map.current) {
+        return;
+      }
+
+      map.current.resize();
+      checkMapPosition();
+
+      if (position) {
+        updateUserMarker(position);
+      }
+    });
+
     return () => {
-      map.current?.remove();
-      map.current = null;
+      cleanupTimer.current = setTimeout(() => {
+        if (map.current !== mapInstance) {
+          return;
+        }
+
+        markers.current.forEach(
+          (item) => {
+            try {
+              item.marker.remove();
+            } catch {
+              // Marker already removed.
+            }
+          }
+        );
+
+        markers.current = [];
+
+        if (userMarker.current) {
+          try {
+            userMarker.current.remove();
+          } catch {
+            // User marker already removed.
+          }
+
+          userMarker.current = null;
+        }
+
+        map.current = null;
+
+        try {
+          mapInstance.remove();
+        } catch {
+          // Map may already have been removed.
+        }
+
+        cleanupTimer.current = null;
+      }, 0);
     };
   }, []);
 
+  const updateUserMarker = (coordinates) => {
+    if (
+      !map.current ||
+      !Array.isArray(coordinates) ||
+      coordinates.length !== 2
+    ) {
+      return;
+    }
+
+    if (userMarker.current) {
+      try {
+        userMarker.current.setLngLat(
+          coordinates
+        );
+        return;
+      } catch {
+        try {
+          userMarker.current.remove();
+        } catch {
+          // Marker already removed.
+        }
+
+        userMarker.current = null;
+      }
+    }
+
+    const markerElement =
+      document.createElement("div");
+
+    markerElement.innerHTML = `
+      <div
+        style="
+          position: relative;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #3b82f6;
+          border: 4px solid white;
+          box-shadow:
+            0 2px 8px rgba(0,0,0,0.30),
+            0 0 0 7px rgba(59,130,246,0.20);
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 2px solid rgba(59,130,246,0.45);
+            animation: golocal-location-pulse 1.8s ease-out infinite;
+          "
+        ></div>
+      </div>
+    `;
+
+    if (
+      !document.getElementById(
+        "golocal-location-marker-style"
+      )
+    ) {
+      const style =
+        document.createElement("style");
+
+      style.id =
+        "golocal-location-marker-style";
+
+      style.textContent = `
+        @keyframes golocal-location-pulse {
+          0% {
+            transform: scale(0.65);
+            opacity: 0.8;
+          }
+
+          70% {
+            transform: scale(1.25);
+            opacity: 0;
+          }
+
+          100% {
+            transform: scale(1.25);
+            opacity: 0;
+          }
+        }
+      `;
+
+      document.head.appendChild(style);
+    }
+
+    userMarker.current =
+      new maptilersdk.Marker({
+        element: markerElement,
+        anchor: "center",
+      })
+        .setLngLat(coordinates)
+        .addTo(map.current);
+  };
+
   useEffect(() => {
+    if (!isVisible || !map.current) {
+      return;
+    }
+
+    const resizeMap = () => {
+      if (map.current) {
+        try {
+          map.current.resize();
+        } catch {
+          // Map may be transitioning.
+        }
+      }
+    };
+
+    const firstTimer = setTimeout(
+      resizeMap,
+      0
+    );
+
+    const secondTimer = setTimeout(
+      resizeMap,
+      150
+    );
+
+    return () => {
+      clearTimeout(firstTimer);
+      clearTimeout(secondTimer);
+    };
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (cleanupTimer.current) {
+      clearTimeout(cleanupTimer.current);
+      cleanupTimer.current = null;
+    }
+
     if (!map.current) {
       return;
     }
@@ -253,11 +363,33 @@ function MapView({
       ? DARK_MAP_STYLE
       : LIGHT_MAP_STYLE;
 
-    map.current.setStyle(newStyle);
+    try {
+      map.current.setStyle(
+        newStyle
+      );
+
+      map.current.once(
+        "styledata",
+        () => {
+          if (map.current) {
+            map.current.resize();
+
+            if (position) {
+              updateUserMarker(position);
+            }
+          }
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Failed to change map style:",
+        error
+      );
+    }
   }, [darkMode]);
 
   useEffect(() => {
-    if (!map.current || resetMap === 0) {
+    if (!map.current || !resetMap) {
       return;
     }
 
@@ -272,12 +404,17 @@ function MapView({
   }, [resetMap]);
 
   useEffect(() => {
-    if (!map.current || !selectedPlace) {
+    if (
+      !map.current ||
+      !selectedPlace ||
+      !selectedPlace.coordinates
+    ) {
       return;
     }
 
     map.current.flyTo({
-      center: selectedPlace.coordinates,
+      center:
+        selectedPlace.coordinates,
       zoom: PLACE_ZOOM,
       duration: 1000,
       essential: true,
@@ -285,69 +422,187 @@ function MapView({
   }, [selectedPlace]);
 
   useEffect(() => {
-    if (!map.current || !selectedPlace) {
+    if (
+      !map.current ||
+      !selectedPlace ||
+      !selectedPlace.coordinates ||
+      !onCardPositionChange
+    ) {
       return;
     }
 
-    updatePlacePosition();
+    const updateCardPosition = () => {
+      if (
+        !map.current ||
+        !selectedPlace?.coordinates
+      ) {
+        return;
+      }
 
-    const handleMove = () => {
-      updatePlacePosition();
+      try {
+        const projected =
+          map.current.project(
+            selectedPlace.coordinates
+          );
+
+        onCardPositionChange({
+          x: projected.x,
+          y: projected.y,
+        });
+      } catch {
+        // Map may not be ready yet.
+      }
     };
 
-    map.current.on("move", handleMove);
-    map.current.on("resize", handleMove);
+    updateCardPosition();
+
+    map.current.on(
+      "move",
+      updateCardPosition
+    );
+
+    map.current.on(
+      "resize",
+      updateCardPosition
+    );
 
     return () => {
-      map.current?.off("move", handleMove);
-      map.current?.off("resize", handleMove);
+      if (!map.current) {
+        return;
+      }
+
+      map.current.off(
+        "move",
+        updateCardPosition
+      );
+
+      map.current.off(
+        "resize",
+        updateCardPosition
+      );
     };
-  }, [selectedPlace]);
+  }, [
+    selectedPlace,
+    onCardPositionChange,
+  ]);
 
   useEffect(() => {
-    if (!map.current || !selectedCategory) {
+    if (!map.current) {
       return;
     }
 
-    markers.current.forEach((item) => {
-      item.marker.remove();
-    });
+    markers.current.forEach(
+      (item) => {
+        try {
+          item.marker.remove();
+        } catch {
+          // Marker already removed.
+        }
+      }
+    );
 
     markers.current = [];
 
-    const search = searchText
-      .trim()
-      .toLowerCase();
+    const normalizedSearch =
+      search.trim().toLowerCase();
 
-    let places = [];
+    let places = Array.isArray(
+      restaurants
+    )
+      ? [...restaurants]
+      : [];
 
-    if (search) {
-      places = databaseRestaurants.filter(
+    places = places
+      .map((restaurant) => {
+        const latitude = Number(
+          restaurant.latitude ??
+            restaurant.lat
+        );
+
+        const longitude = Number(
+          restaurant.longitude ??
+            restaurant.lng
+        );
+
+        let logo =
+          restaurant.logo || null;
+
+        if (
+          restaurant.name ===
+          "Jollibee"
+        ) {
+          logo = jollibeeLogo;
+        }
+
+        if (
+          restaurant.name ===
+          "Chowking"
+        ) {
+          logo = chowkingLogo;
+        }
+
+        return {
+          ...restaurant,
+          coordinates: [
+            longitude,
+            latitude,
+          ],
+          logo,
+          category:
+            restaurant.category ||
+            "Food",
+          rating:
+            restaurant.rating || 0,
+          description:
+            restaurant.description ||
+            "",
+        };
+      })
+      .filter(
+        (place) =>
+          Number.isFinite(
+            place.coordinates[0]
+          ) &&
+          Number.isFinite(
+            place.coordinates[1]
+          )
+      );
+
+    if (normalizedSearch) {
+      places = places.filter(
         (place) =>
           place.name
-            .toLowerCase()
-            .includes(search) ||
+            ?.toLowerCase()
+            .includes(
+              normalizedSearch
+            ) ||
           place.description
-            .toLowerCase()
-            .includes(search)
+            ?.toLowerCase()
+            .includes(
+              normalizedSearch
+            )
       );
     } else {
-      places = databaseRestaurants.filter(
+      places = places.filter(
         (place) =>
           place.category ===
-          selectedCategory
+          category
       );
     }
 
     places.forEach((place) => {
       const activeCategory =
-        place.category || selectedCategory;
+        place.category || category;
 
       const Icon =
-        categoryIcons[activeCategory];
+        categoryIcons[
+          activeCategory
+        ];
 
       const colors =
-        categoryColors[activeCategory];
+        categoryColors[
+          activeCategory
+        ];
 
       if (!Icon || !colors) {
         return;
@@ -362,7 +617,9 @@ function MapView({
         );
 
       const markerElement =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       markerElement.innerHTML = `
         <div
@@ -393,27 +650,37 @@ function MapView({
       const circle =
         markerElement.firstElementChild;
 
+      if (!circle) {
+        return;
+      }
+
       circle.animate(
         [
           {
-            transform: "translateY(-20px)",
+            transform:
+              "translateY(-20px)",
             opacity: 0,
           },
           {
-            transform: "translateY(2px)",
+            transform:
+              "translateY(2px)",
             opacity: 1,
           },
           {
-            transform: "translateY(-7px)",
+            transform:
+              "translateY(-7px)",
           },
           {
-            transform: "translateY(1px)",
+            transform:
+              "translateY(1px)",
           },
           {
-            transform: "translateY(-3px)",
+            transform:
+              "translateY(-3px)",
           },
           {
-            transform: "translateY(0)",
+            transform:
+              "translateY(0)",
           },
         ],
         {
@@ -438,7 +705,8 @@ function MapView({
         "mouseleave",
         () => {
           const isSelected =
-            selectedPlace?.id === place.id;
+            selectedPlace?.id ===
+            place.id;
 
           if (!isSelected) {
             circle.style.transform =
@@ -455,149 +723,265 @@ function MapView({
         () => {
           const placeWithCategory = {
             ...place,
-            category: activeCategory,
+            category:
+              activeCategory,
           };
 
           onPlaceSelect(
             placeWithCategory
           );
-
-          map.current?.flyTo({
-            center: place.coordinates,
-            zoom: PLACE_ZOOM,
-            duration: 1000,
-            essential: true,
-          });
         }
       );
 
       const marker =
         new maptilersdk.Marker({
-          element: markerElement,
+          element:
+            markerElement,
           anchor: "bottom",
         })
-          .setLngLat(place.coordinates)
+          .setLngLat(
+            place.coordinates
+          )
           .addTo(map.current);
 
       markers.current.push({
         marker,
         place,
         circle,
-        category: activeCategory,
+        category:
+          activeCategory,
       });
     });
 
     return () => {
-      markers.current.forEach((item) => {
-        item.marker.remove();
-      });
+      markers.current.forEach(
+        (item) => {
+          try {
+            item.marker.remove();
+          } catch {
+            // Marker already removed.
+          }
+        }
+      );
 
       markers.current = [];
     };
   }, [
-    selectedCategory,
-    searchText,
+    category,
+    search,
+    restaurants,
     onPlaceSelect,
-    databaseRestaurants,
   ]);
 
   useEffect(() => {
-    markers.current.forEach((item) => {
-      const {
-        place,
-        circle,
-        category,
-      } = item;
+    markers.current.forEach(
+      (item) => {
+        const {
+          place,
+          circle,
+          category:
+            markerCategory,
+        } = item;
 
-      const isSelected =
-        selectedPlace?.id === place.id;
+        const isSelected =
+          selectedPlace?.id ===
+          place.id;
 
-      const colors =
-        categoryColors[category];
+        const colors =
+          categoryColors[
+            markerCategory
+          ];
 
-      if (!colors) {
-        return;
-      }
+        if (!colors || !circle) {
+          return;
+        }
 
-      const existingPulse =
-        circle.querySelector(
-          ".marker-selection-pulse"
-        );
+        const existingPulse =
+          circle.querySelector(
+            ".marker-selection-pulse"
+          );
 
-      if (existingPulse) {
-        existingPulse.remove();
-      }
+        if (existingPulse) {
+          existingPulse.remove();
+        }
 
-      if (isSelected) {
-        if (place.logo) {
-          circle.innerHTML = `
-            <div
-              style="
-                position: relative;
-                width: 52px;
-                height: 52px;
-                background: white;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 3px solid ${colors.border};
-                box-shadow:
-                  0 7px 20px rgba(0,0,0,0.30),
-                  0 0 0 5px ${colors.border}22;
-                transform: scale(1.12);
-              "
-            >
-              <img
-                src="${place.logo}"
-                alt="${place.name}"
+        if (isSelected) {
+          if (place.logo) {
+            circle.innerHTML = `
+              <div
                 style="
-                  width: 36px;
-                  height: 36px;
-                  object-fit: contain;
+                  position: relative;
+                  width: 52px;
+                  height: 52px;
+                  background: white;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  border: 3px solid ${colors.border};
+                  box-shadow:
+                    0 7px 20px rgba(0,0,0,0.30),
+                    0 0 0 5px ${colors.border}22;
+                  transform: scale(1.12);
                 "
-              />
-            </div>
-          `;
+              >
+                <img
+                  src="${place.logo}"
+                  alt="${place.name}"
+                  style="
+                    width: 36px;
+                    height: 36px;
+                    object-fit: contain;
+                  "
+                />
+              </div>
+            `;
 
-          const selectedCircle =
-            circle.firstElementChild;
+            const selectedCircle =
+              circle.firstElementChild;
+
+            if (!selectedCircle) {
+              return;
+            }
+
+            const selectedPulse =
+              document.createElement(
+                "div"
+              );
+
+            selectedPulse.className =
+              "marker-selection-pulse";
+
+            selectedPulse.style.position =
+              "absolute";
+
+            selectedPulse.style.inset =
+              "-8px";
+
+            selectedPulse.style.borderRadius =
+              "50%";
+
+            selectedPulse.style.border =
+              `2px solid ${colors.border}`;
+
+            selectedPulse.style.pointerEvents =
+              "none";
+
+            selectedPulse.style.opacity =
+              "0";
+
+            selectedCircle.appendChild(
+              selectedPulse
+            );
+
+            selectedPulse.animate(
+              [
+                {
+                  transform:
+                    "scale(0.82)",
+                  opacity: 0.7,
+                },
+                {
+                  transform:
+                    "scale(1.2)",
+                  opacity: 0,
+                },
+              ],
+              {
+                duration: 1500,
+                iterations:
+                  Infinity,
+                easing:
+                  "ease-out",
+              }
+            );
+
+            return;
+          }
+
+          const Icon =
+            categoryIcons[
+              markerCategory
+            ];
+
+          if (Icon) {
+            circle.innerHTML =
+              renderToStaticMarkup(
+                <Icon
+                  size={23}
+                  strokeWidth={2.4}
+                />
+              );
+          }
+
+          circle.style.width =
+            "52px";
+
+          circle.style.height =
+            "52px";
+
+          circle.style.background =
+            colors.background;
+
+          circle.style.border =
+            `3px solid ${colors.border}`;
+
+          circle.style.color =
+            colors.text;
+
+          circle.style.transform =
+            "scale(1.12)";
+
+          circle.style.boxShadow =
+            `0 7px 20px rgba(0,0,0,0.30), 0 0 0 5px ${colors.border}22`;
 
           const selectedPulse =
-            document.createElement("div");
+            document.createElement(
+              "div"
+            );
 
           selectedPulse.className =
             "marker-selection-pulse";
 
           selectedPulse.style.position =
             "absolute";
-          selectedPulse.style.inset = "-8px";
+
+          selectedPulse.style.inset =
+            "-8px";
+
           selectedPulse.style.borderRadius =
             "50%";
+
           selectedPulse.style.border =
             `2px solid ${colors.border}`;
+
           selectedPulse.style.pointerEvents =
             "none";
-          selectedPulse.style.opacity = "0";
 
-          selectedCircle.appendChild(
+          selectedPulse.style.opacity =
+            "0";
+
+          circle.appendChild(
             selectedPulse
           );
 
           selectedPulse.animate(
             [
               {
-                transform: "scale(0.82)",
+                transform:
+                  "scale(0.82)",
                 opacity: 0.7,
               },
               {
-                transform: "scale(1.2)",
+                transform:
+                  "scale(1.2)",
                 opacity: 0,
               },
             ],
             {
               duration: 1500,
-              iterations: Infinity,
+              iterations:
+                Infinity,
               easing: "ease-out",
             }
           );
@@ -606,103 +990,51 @@ function MapView({
         }
 
         const Icon =
-          categoryIcons[category];
+          categoryIcons[
+            markerCategory
+          ];
 
         if (Icon) {
           circle.innerHTML =
             renderToStaticMarkup(
               <Icon
-                size={23}
-                strokeWidth={2.4}
+                size={21}
+                strokeWidth={2.3}
               />
             );
         }
 
-        circle.style.width = "52px";
-        circle.style.height = "52px";
+        circle.style.width =
+          "44px";
+
+        circle.style.height =
+          "44px";
+
         circle.style.background =
           colors.background;
+
         circle.style.border =
           `3px solid ${colors.border}`;
+
         circle.style.color =
           colors.text;
+
         circle.style.transform =
-          "scale(1.12)";
+          "scale(1)";
+
         circle.style.boxShadow =
-          `0 7px 20px rgba(0,0,0,0.30), 0 0 0 5px ${colors.border}22`;
-
-        const selectedPulse =
-          document.createElement("div");
-
-        selectedPulse.className =
-          "marker-selection-pulse";
-
-        selectedPulse.style.position =
-          "absolute";
-        selectedPulse.style.inset = "-8px";
-        selectedPulse.style.borderRadius =
-          "50%";
-        selectedPulse.style.border =
-          `2px solid ${colors.border}`;
-        selectedPulse.style.pointerEvents =
-          "none";
-        selectedPulse.style.opacity = "0";
-
-        circle.appendChild(
-          selectedPulse
-        );
-
-        selectedPulse.animate(
-          [
-            {
-              transform: "scale(0.82)",
-              opacity: 0.7,
-            },
-            {
-              transform: "scale(1.2)",
-              opacity: 0,
-            },
-          ],
-          {
-            duration: 1500,
-            iterations: Infinity,
-            easing: "ease-out",
-          }
-        );
-
-        return;
+          "0 4px 12px rgba(0,0,0,0.22), 0 2px 4px rgba(0,0,0,0.12)";
       }
+    );
+  }, [selectedPlace]);
 
-      const Icon =
-        categoryIcons[category];
+  useEffect(() => {
+    if (!position || !map.current) {
+      return;
+    }
 
-      if (Icon) {
-        circle.innerHTML =
-          renderToStaticMarkup(
-            <Icon
-              size={21}
-              strokeWidth={2.3}
-            />
-          );
-      }
-
-      circle.style.width = "44px";
-      circle.style.height = "44px";
-      circle.style.background =
-        colors.background;
-      circle.style.border =
-        `3px solid ${colors.border}`;
-      circle.style.color =
-        colors.text;
-      circle.style.transform =
-        "scale(1)";
-      circle.style.boxShadow =
-        "0 4px 12px rgba(0,0,0,0.22), 0 2px 4px rgba(0,0,0,0.12)";
-    });
-  }, [
-    selectedPlace,
-    selectedCategory,
-  ]);
+    updateUserMarker(position);
+  }, [position]);
 
   const zoomIn = () => {
     if (!map.current) {
@@ -749,17 +1081,30 @@ function MapView({
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      (currentPosition) => {
         const {
           longitude,
           latitude,
-        } = position.coords;
+        } = currentPosition.coords;
+
+        const userCoordinates = [
+          longitude,
+          latitude,
+        ];
+
+        if (setPosition) {
+          setPosition(
+            userCoordinates
+          );
+        }
+
+        updateUserMarker(
+          userCoordinates
+        );
 
         map.current?.flyTo({
-          center: [
-            longitude,
-            latitude,
-          ],
+          center:
+            userCoordinates,
           zoom: 16,
           duration: 1000,
           essential: true,
@@ -950,21 +1295,6 @@ function MapView({
           strokeWidth={2.2}
         />
       </button>
-
-      <PlaceCard
-        place={selectedPlace}
-        position={
-          selectedPlace
-            ? {
-                x: 0,
-                y: 0,
-              }
-            : null
-        }
-        isSaved={isSaved}
-        onClose={onClosePlace}
-        onSave={onSavePlace}
-      />
     </div>
   );
 }

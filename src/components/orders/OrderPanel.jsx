@@ -11,7 +11,7 @@ import {
 function OrderPanel({
   place,
   onClose,
-  onAdd,
+  onOrder,
 }) {
   const [quantity, setQuantity] = useState(1);
   const [isPlacing, setIsPlacing] = useState(false);
@@ -19,7 +19,7 @@ function OrderPanel({
 
   if (!place) return null;
 
-  const price = place.price || 99;
+  const price = Number(place.price) || 99;
   const deliveryFee = 49;
 
   const subtotal = price * quantity;
@@ -33,8 +33,8 @@ function OrderPanel({
     setQuantity((value) => Math.max(1, value - 1));
   };
 
-  const handleAdd = () => {
-    if (isPlacing) return;
+  const handleOrder = () => {
+    if (isPlacing || isPlaced) return;
 
     setIsPlacing(true);
 
@@ -42,18 +42,7 @@ function OrderPanel({
       setIsPlaced(true);
 
       setTimeout(() => {
-        onAdd({
-          id: Date.now(),
-          place: place.name,
-          item: place.item || "Food order",
-          price: `₱${subtotal}`,
-          quantity,
-          status: "Preparing",
-          statusType: "active",
-          time: "Just now",
-          address: "Your delivery address",
-        });
-
+        onOrder(place, quantity);
         onClose();
       }, 1800);
     }, 250);
@@ -79,7 +68,7 @@ function OrderPanel({
             </div>
           </div>
 
-          {!isPlacing && (
+          {!isPlacing && !isPlaced && (
             <button
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition duration-150 hover:bg-gray-200 active:scale-90 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
@@ -211,7 +200,7 @@ function OrderPanel({
             </div>
 
             <button
-              onClick={handleAdd}
+              onClick={handleOrder}
               disabled={isPlacing}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-3 text-sm font-bold text-white shadow-sm transition duration-200 hover:bg-blue-600 active:scale-95 disabled:cursor-wait"
             >

@@ -1,8 +1,4 @@
-const Database = require("better-sqlite3");
-
-const db = new Database("golocal.db");
-
-db.pragma("journal_mode = WAL");
+const db = require("../client");
 
 db.prepare(`
   CREATE TABLE IF NOT EXISTS restaurants (
@@ -233,5 +229,3 @@ if (restaurantCount.count === 0) {
     "Default GoLocal places added to the database."
   );
 }
-
-module.exports = db;

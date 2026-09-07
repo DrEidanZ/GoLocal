@@ -5,13 +5,13 @@ import {
 } from "lucide-react";
 
 function SearchBar({
-  searchText,
-  setSearchText,
-  searchResults = [],
-  onResultSelect,
+  search,
+  setSearch,
+  results = [],
+  onSelectPlace,
 }) {
   const clearSearch = () => {
-    setSearchText("");
+    setSearch("");
   };
 
   return (
@@ -25,15 +25,15 @@ function SearchBar({
 
         <input
           type="text"
-          value={searchText}
+          value={search}
           onChange={(event) =>
-            setSearchText(event.target.value)
+            setSearch(event.target.value)
           }
           placeholder="Search places, restaurants, hotels..."
           className="min-w-0 flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
         />
 
-        {searchText && (
+        {search && (
           <button
             onClick={clearSearch}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 active:scale-90 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
@@ -44,15 +44,15 @@ function SearchBar({
         )}
       </div>
 
-      {searchText.trim() &&
-        searchResults.length > 0 && (
+      {search.trim() &&
+        results.length > 0 && (
           <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
             <div className="max-h-72 overflow-y-auto">
-              {searchResults.map((place) => (
+              {results.map((place) => (
                 <button
                   key={`${place.category}-${place.name}`}
                   onClick={() =>
-                    onResultSelect(place)
+                    onSelectPlace(place)
                   }
                   className="flex w-full items-center gap-3 border-b border-gray-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-50 active:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800 dark:active:bg-gray-800"
                 >
@@ -101,8 +101,8 @@ function SearchBar({
           </div>
         )}
 
-      {searchText.trim() &&
-        searchResults.length === 0 && (
+      {search.trim() &&
+        results.length === 0 && (
           <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-gray-100 bg-white px-4 py-5 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900">
             <Search
               size={24}

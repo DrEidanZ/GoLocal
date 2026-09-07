@@ -5,6 +5,8 @@ import {
   Plus,
   Trash2,
   Store,
+  Pencil,
+  X,
 } from "lucide-react";
 
 const API_BASE_URL =
@@ -14,14 +16,11 @@ const API_BASE_URL =
     : `http://${window.location.hostname}:5000`;
 
 function AdminRestaurants({ onBack }) {
-  const [restaurants, setRestaurants] =
-    useState([]);
+  const [restaurants, setRestaurants] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -32,11 +31,13 @@ function AdminRestaurants({ onBack }) {
     logo: "",
   });
 
-  const [adding, setAdding] =
-    useState(false);
+  const [adding, setAdding] = useState(false);
 
-  const [deletingId, setDeletingId] =
-    useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const [editingId, setEditingId] = useState(null);
+
+  const [editing, setEditing] = useState(false);
 
   const fetchRestaurants = async () => {
     try {
@@ -53,8 +54,7 @@ function AdminRestaurants({ onBack }) {
         );
       }
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       setRestaurants(data);
     } catch (err) {
@@ -73,13 +73,25 @@ function AdminRestaurants({ onBack }) {
   }, []);
 
   const handleChange = (event) => {
-    const { name, value } =
-      event.target;
+    const { name, value } = event.target;
 
     setForm((current) => ({
       ...current,
       [name]: value,
     }));
+  };
+
+  const resetForm = () => {
+    setForm({
+      name: "",
+      description: "",
+      category: "Food",
+      latitude: "",
+      longitude: "",
+      logo: "",
+    });
+
+    setEditingId(null);
   };
 
   const handleSubmit = async (event) => {
@@ -98,71 +110,115 @@ function AdminRestaurants({ onBack }) {
     }
 
     try {
-      setAdding(true);
       setError("");
 
+      const isEditing = editingId !== null;
+
+      if (isEditing) {
+        setEditing(true);
+      } else {
+        setAdding(true);
+      }
+
       const response = await fetch(
-        `${API_BASE_URL}/api/restaurants`,
+        isEditing
+          ? `${API_BASE_URL}/api/restaurants/${encodeURIComponent(
+              editingId
+            )}`
+          : `${API_BASE_URL}/api/restaurants`,
         {
-          method: "POST",
+          method: isEditing ? "PUT" : "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             name: form.name.trim(),
-            description:
-              form.description.trim(),
+            description: form.description.trim(),
             category: form.category,
-            latitude:
-              Number(form.latitude),
-            longitude:
-              Number(form.longitude),
+            latitude: Number(form.latitude),
+            longitude: Number(form.longitude),
             logo: form.logo.trim(),
           }),
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
           data.message ||
-            "Failed to create restaurant."
+            (isEditing
+              ? "Failed to update restaurant."
+              : "Failed to create restaurant.")
         );
       }
 
-      setRestaurants((current) => [
-        data.restaurant,
-        ...current,
-      ]);
+      if (isEditing) {
+        setRestaurants((current) =>
+          current.map((restaurant) =>
+            restaurant.id === editingId
+              ? data.restaurant
+              : restaurant
+          )
+        );
+      } else {
+        setRestaurants((current) => [
+          data.restaurant,
+          ...current,
+        ]);
+      }
 
-      setForm({
-        name: "",
-        description: "",
-        category: "Food",
-        latitude: "",
-        longitude: "",
-        logo: "",
-      });
+      resetForm();
     } catch (err) {
       console.error(err);
 
       setError(
         err.message ||
-          "Failed to add restaurant."
+          (editingId !== null
+            ? "Failed to update restaurant."
+            : "Failed to add restaurant.")
       );
     } finally {
       setAdding(false);
+      setEditing(false);
     }
   };
 
+  const handleEdit = (restaurant) => {
+    setError("");
+
+    setEditingId(restaurant.id);
+
+    setForm({
+      name: restaurant.name || "",
+      description: restaurant.description || "",
+      category: restaurant.category || "Food",
+      latitude:
+        restaurant.latitude !== undefined
+          ? String(restaurant.latitude)
+          : "",
+      longitude:
+        restaurant.longitude !== undefined
+          ? String(restaurant.longitude)
+          : "",
+      logo: restaurant.logo || "",
+    });
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const handleCancelEdit = () => {
+    resetForm();
+    setError("");
+  };
+
   const handleDelete = async (restaurant) => {
-    const confirmed =
-      window.confirm(
-        `Delete "${restaurant.name}"?`
-      );
+    const confirmed = window.confirm(
+      `Delete "${restaurant.name}"?`
+    );
 
     if (!confirmed) {
       return;
@@ -182,22 +238,16 @@ function AdminRestaurants({ onBack }) {
       );
 
       const contentType =
-        response.headers.get(
-          "content-type"
-        ) || "";
+        response.headers.get("content-type") || "";
 
       let data = {};
 
       if (
-        contentType.includes(
-          "application/json"
-        )
+        contentType.includes("application/json")
       ) {
-        data =
-          await response.json();
+        data = await response.json();
       } else {
-        const text =
-          await response.text();
+        const text = await response.text();
 
         if (text) {
           console.error(
@@ -216,11 +266,13 @@ function AdminRestaurants({ onBack }) {
 
       setRestaurants((current) =>
         current.filter(
-          (item) =>
-            item.id !==
-            restaurant.id
+          (item) => item.id !== restaurant.id
         )
       );
+
+      if (editingId === restaurant.id) {
+        resetForm();
+      }
     } catch (err) {
       console.error(err);
 
@@ -232,6 +284,8 @@ function AdminRestaurants({ onBack }) {
       setDeletingId(null);
     }
   };
+
+  const isEditing = editingId !== null;
 
   return (
     <div className="min-h-screen overflow-y-auto bg-gray-50 pb-8 dark:bg-gray-950">
@@ -285,7 +339,7 @@ function AdminRestaurants({ onBack }) {
               </h1>
 
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Add restaurants to GoLocal
+                Add and manage restaurants in GoLocal
               </p>
             </div>
           </div>
@@ -311,12 +365,44 @@ function AdminRestaurants({ onBack }) {
               dark:bg-gray-900
             "
           >
-            <div className="mb-5 flex items-center gap-2">
-              <Plus size={20} />
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <Pencil size={20} />
+                ) : (
+                  <Plus size={20} />
+                )}
 
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Add Restaurant
-              </h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                  {isEditing
+                    ? "Edit Restaurant"
+                    : "Add Restaurant"}
+                </h2>
+              </div>
+
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  title="Cancel editing"
+                  className="
+                    flex
+                    h-8
+                    w-8
+                    items-center
+                    justify-center
+                    rounded-lg
+                    text-gray-500
+                    transition
+                    hover:bg-gray-100
+                    hover:text-gray-700
+                    dark:hover:bg-gray-800
+                    dark:hover:text-gray-200
+                  "
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -356,9 +442,7 @@ function AdminRestaurants({ onBack }) {
 
                 <textarea
                   name="description"
-                  value={
-                    form.description
-                  }
+                  value={form.description}
                   onChange={handleChange}
                   placeholder="Short description"
                   rows={3}
@@ -434,12 +518,8 @@ function AdminRestaurants({ onBack }) {
                     type="number"
                     step="any"
                     name="latitude"
-                    value={
-                      form.latitude
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={form.latitude}
+                    onChange={handleChange}
                     placeholder="10.3157"
                     className="
                       w-full
@@ -468,12 +548,8 @@ function AdminRestaurants({ onBack }) {
                     type="number"
                     step="any"
                     name="longitude"
-                    value={
-                      form.longitude
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={form.longitude}
+                    onChange={handleChange}
                     placeholder="123.8854"
                     className="
                       w-full
@@ -523,35 +599,74 @@ function AdminRestaurants({ onBack }) {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={adding}
-                className="
-                  flex
-                  w-full
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  bg-green-600
-                  px-4
-                  py-3
-                  text-sm
-                  font-bold
-                  text-white
-                  transition
-                  hover:bg-green-700
-                  active:scale-[0.98]
-                  disabled:cursor-not-allowed
-                  disabled:opacity-60
-                "
-              >
-                <Plus size={18} />
+              <div className="flex gap-2">
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="
+                      flex
+                      flex-1
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-gray-200
+                      px-4
+                      py-3
+                      text-sm
+                      font-bold
+                      text-gray-700
+                      transition
+                      hover:bg-gray-100
+                      dark:border-gray-700
+                      dark:text-gray-200
+                      dark:hover:bg-gray-800
+                    "
+                  >
+                    Cancel
+                  </button>
+                )}
 
-                {adding
-                  ? "Adding..."
-                  : "Add Restaurant"}
-              </button>
+                <button
+                  type="submit"
+                  disabled={adding || editing}
+                  className="
+                    flex
+                    flex-1
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    bg-green-600
+                    px-4
+                    py-3
+                    text-sm
+                    font-bold
+                    text-white
+                    transition
+                    hover:bg-green-700
+                    active:scale-[0.98]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  {isEditing ? (
+                    <Pencil size={18} />
+                  ) : (
+                    <Plus size={18} />
+                  )}
+
+                  {editing
+                    ? "Saving..."
+                    : adding
+                    ? "Adding..."
+                    : isEditing
+                    ? "Save Changes"
+                    : "Add Restaurant"}
+                </button>
+              </div>
             </div>
           </form>
 
@@ -617,122 +732,134 @@ function AdminRestaurants({ onBack }) {
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Add your first restaurant
-                  using the form.
+                  Add your first restaurant using the
+                  form.
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
-                {restaurants.map(
-                  (restaurant) => (
-                    <div
-                      key={
-                        restaurant.id
-                      }
-                      className="
-                        flex
-                        items-center
-                        gap-3
-                        rounded-xl
-                        border
-                        border-gray-100
-                        p-3
-                        dark:border-gray-800
-                      "
-                    >
-                      {restaurant.logo ? (
-                        <img
-                          src={
-                            restaurant.logo
-                          }
-                          alt=""
-                          className="
-                            h-12
-                            w-12
-                            shrink-0
-                            rounded-xl
-                            object-cover
-                          "
-                        />
-                      ) : (
-                        <div
-                          className="
-                            flex
-                            h-12
-                            w-12
-                            shrink-0
-                            items-center
-                            justify-center
-                            rounded-xl
-                            bg-gray-100
-                            text-gray-400
-                            dark:bg-gray-800
-                          "
-                        >
-                          <Store
-                            size={20}
-                          />
-                        </div>
-                      )}
-
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-gray-900 dark:text-white">
-                          {
-                            restaurant.name
-                          }
-                        </p>
-
-                        <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                          {
-                            restaurant.category
-                          }
-                        </p>
-
-                        <p className="mt-0.5 text-[11px] text-gray-400">
-                          {restaurant.latitude},{" "}
-                          {
-                            restaurant.longitude
-                          }
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleDelete(
-                            restaurant
-                          )
-                        }
-                        disabled={
-                          deletingId ===
-                          restaurant.id
-                        }
-                        title="Delete restaurant"
+                {restaurants.map((restaurant) => (
+                  <div
+                    key={restaurant.id}
+                    className="
+                      flex
+                      items-center
+                      gap-3
+                      rounded-xl
+                      border
+                      border-gray-100
+                      p-3
+                      dark:border-gray-800
+                    "
+                  >
+                    {restaurant.logo ? (
+                      <img
+                        src={restaurant.logo}
+                        alt=""
+                        className="
+                          h-12
+                          w-12
+                          shrink-0
+                          rounded-xl
+                          object-cover
+                        "
+                      />
+                    ) : (
+                      <div
                         className="
                           flex
-                          h-9
-                          w-9
+                          h-12
+                          w-12
                           shrink-0
                           items-center
                           justify-center
-                          rounded-lg
-                          text-red-500
-                          transition
-                          hover:bg-red-50
-                          hover:text-red-600
-                          active:scale-90
-                          disabled:cursor-not-allowed
-                          disabled:opacity-40
-                          dark:hover:bg-red-950/30
+                          rounded-xl
+                          bg-gray-100
+                          text-gray-400
+                          dark:bg-gray-800
                         "
                       >
-                        <Trash2
-                          size={17}
-                        />
-                      </button>
+                        <Store size={20} />
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-gray-900 dark:text-white">
+                        {restaurant.name}
+                      </p>
+
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                        {restaurant.category}
+                      </p>
+
+                      <p className="mt-0.5 text-[11px] text-gray-400">
+                        {restaurant.latitude},{" "}
+                        {restaurant.longitude}
+                      </p>
                     </div>
-                  )
-                )}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleEdit(restaurant)
+                      }
+                      disabled={
+                        deletingId === restaurant.id
+                      }
+                      title="Edit restaurant"
+                      className="
+                        flex
+                        h-9
+                        w-9
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-lg
+                        text-gray-500
+                        transition
+                        hover:bg-gray-100
+                        hover:text-gray-700
+                        active:scale-90
+                        disabled:cursor-not-allowed
+                        disabled:opacity-40
+                        dark:hover:bg-gray-800
+                        dark:hover:text-gray-200
+                      "
+                    >
+                      <Pencil size={17} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDelete(restaurant)
+                      }
+                      disabled={
+                        deletingId === restaurant.id
+                      }
+                      title="Delete restaurant"
+                      className="
+                        flex
+                        h-9
+                        w-9
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-lg
+                        text-red-500
+                        transition
+                        hover:bg-red-50
+                        hover:text-red-600
+                        active:scale-90
+                        disabled:cursor-not-allowed
+                        disabled:opacity-40
+                        dark:hover:bg-red-950/30
+                      "
+                    >
+                      <Trash2 size={17} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
