@@ -34,6 +34,8 @@ function OrderPanel({
   };
 
   const handleOrder = () => {
+    console.log("ORDER BUTTON CLICKED");
+
     if (isPlacing || isPlaced) return;
 
     setIsPlacing(true);

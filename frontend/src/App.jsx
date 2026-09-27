@@ -107,13 +107,14 @@ function App() {
   const [resetMap, setResetMap] =
     useState(0);
 
-  const [darkMode, setDarkMode] = useState(() => {
-    return (
-      localStorage.getItem(
-        "golocal-dark-mode"
-      ) === "true"
-    );
-  });
+  const [darkMode, setDarkMode] =
+    useState(() => {
+      return (
+        localStorage.getItem(
+          "golocal-dark-mode"
+        ) === "true"
+      );
+    });
 
   useEffect(() => {
     document.documentElement.classList.toggle(
@@ -154,21 +155,23 @@ function App() {
         const data =
           await response.json();
 
-        setRestaurants((currentRestaurants) => {
-          const currentData =
-            JSON.stringify(
-              currentRestaurants
-            );
+        setRestaurants(
+          (currentRestaurants) => {
+            const currentData =
+              JSON.stringify(
+                currentRestaurants
+              );
 
-          const newData =
-            JSON.stringify(data);
+            const newData =
+              JSON.stringify(data);
 
-          if (currentData === newData) {
-            return currentRestaurants;
+            if (currentData === newData) {
+              return currentRestaurants;
+            }
+
+            return data;
           }
-
-          return data;
-        });
+        );
       } catch (error) {
         console.error(
           "Error fetching restaurants:",
@@ -188,13 +191,13 @@ function App() {
       clearInterval(interval);
   }, [user]);
 
-  useEffect(() => {
-    if (!user) {
-      setOrders([]);
-      return;
-    }
+  const fetchMyOrders = useCallback(
+    async () => {
+      if (!user) {
+        setOrders([]);
+        return [];
+      }
 
-    const fetchMyOrders = async () => {
       try {
         const token =
           localStorage.getItem(
@@ -202,12 +205,8 @@ function App() {
           );
 
         if (!token) {
-          console.error(
-            "No authentication token found."
-          );
-
           setOrders([]);
-          return;
+          return [];
         }
 
         const response = await fetch(
@@ -241,16 +240,26 @@ function App() {
             )
             .filter(Boolean);
 
-        setOrders(
-          normalizedOrders
-        );
+        setOrders(normalizedOrders);
+
+        return normalizedOrders;
       } catch (error) {
         console.error(
           "Error fetching orders:",
           error
         );
+
+        return [];
       }
-    };
+    },
+    [user, restaurants]
+  );
+
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      return;
+    }
 
     fetchMyOrders();
 
@@ -261,7 +270,7 @@ function App() {
 
     return () =>
       clearInterval(interval);
-  }, [user, restaurants]);
+  }, [user, fetchMyOrders]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -288,7 +297,9 @@ function App() {
     );
   };
 
-  const handleRegister = (registeredUser) => {
+  const handleRegister = (
+    registeredUser
+  ) => {
     setUser(registeredUser);
     setShowRegister(false);
     setTab("explore");
@@ -306,9 +317,7 @@ function App() {
 
     localStorage.setItem(
       "golocal-user",
-      JSON.stringify(
-        updatedUser
-      )
+      JSON.stringify(updatedUser)
     );
   };
 
@@ -426,6 +435,8 @@ function App() {
           normalizedPlace.category
         );
       }
+
+      setTab("explore");
     },
     []
   );
@@ -518,24 +529,17 @@ function App() {
         );
       }
 
-      const backendOrder =
-        normalizeOrder(
-          data.order,
-          restaurants
-        );
-
-      setOrders((currentOrders) => [
-        backendOrder,
-        ...currentOrders,
-      ]);
-
       setOrderPlace(null);
+
+      await fetchMyOrders();
+
+      setTab("orders");
 
       addNotification(
         `Order placed at ${place.name}.`
       );
 
-      return backendOrder;
+      return data.order;
     } catch (error) {
       console.error(
         "Error creating order:",
@@ -546,6 +550,8 @@ function App() {
         error.message ||
           "Failed to place order."
       );
+
+      return null;
     }
   };
 
@@ -736,38 +742,35 @@ function App() {
               }
             />
           )}
-
-        {orderPlace && (
-          <OrderPanel
-            place={orderPlace}
-            onClose={() =>
-              setOrderPlace(null)
-            }
-            onOrder={createOrder}
-          />
-        )}
       </div>
+
+      {orderPlace && (
+        <OrderPanel
+          place={orderPlace}
+          onClose={() =>
+            setOrderPlace(null)
+          }
+          onOrder={createOrder}
+        />
+      )}
 
       {tab === "orders" && (
         <Orders
           orders={orders}
           onRemove={removeOrder}
-          onBack={() =>
-            setTab("explore")
-          }
         />
       )}
 
       {tab === "saved" && (
         <Saved
-          saved={saved}
+          places={saved}
           onRemove={(place) =>
             toggleSaved(place)
           }
-          onSelectPlace={
+          onSelect={
             handlePlaceSelect
           }
-          onBack={() =>
+          onExplore={() =>
             setTab("explore")
           }
         />

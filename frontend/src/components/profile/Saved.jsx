@@ -15,12 +15,15 @@ function Saved({
   onSelect,
   onRemove,
 }) {
-  const [removingPlace, setRemovingPlace] = useState(null);
+  const [removingPlace, setRemovingPlace] =
+    useState(null);
 
   const handleRemove = (place) => {
-    if (removingPlace) return;
+    if (removingPlace) {
+      return;
+    }
 
-    setRemovingPlace(place.name);
+    setRemovingPlace(place.id);
 
     setTimeout(() => {
       onRemove(place);
@@ -33,7 +36,10 @@ function Saved({
       <div className="border-b border-gray-100 bg-white px-5 py-5 dark:border-gray-800 dark:bg-gray-900">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-500 dark:bg-red-950/40">
-            <Heart size={21} fill="currentColor" />
+            <Heart
+              size={21}
+              fill="currentColor"
+            />
           </div>
 
           <div>
@@ -59,7 +65,8 @@ function Saved({
           </h2>
 
           <p className="mt-2 max-w-sm text-sm leading-6 text-gray-500 dark:text-gray-400">
-            Save your favorite restaurants, hotels, and places to find them
+            Save your favorite restaurants,
+            hotels, and places to find them
             quickly later.
           </p>
 
@@ -74,11 +81,12 @@ function Saved({
       ) : (
         <div className="space-y-3 p-4">
           {places.map((place, index) => {
-            const isRemoving = removingPlace === place.name;
+            const isRemoving =
+              removingPlace === place.id;
 
             return (
               <div
-                key={place.name}
+                key={place.id}
                 className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
                 style={{
                   animation: isRemoving
@@ -132,12 +140,19 @@ function Saved({
                     </div>
 
                     <button
-                      onClick={() => handleRemove(place)}
-                      disabled={!!removingPlace}
+                      onClick={() =>
+                        handleRemove(place)
+                      }
+                      disabled={
+                        !!removingPlace
+                      }
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500 transition duration-150 hover:bg-red-100 active:scale-90 disabled:cursor-wait dark:bg-red-950/40 dark:hover:bg-red-950/60"
                       aria-label={`Remove ${place.name} from saved`}
                     >
-                      <Heart size={17} fill="currentColor" />
+                      <Heart
+                        size={17}
+                        fill="currentColor"
+                      />
                     </button>
                   </div>
 
@@ -147,8 +162,12 @@ function Saved({
 
                   <div className="mt-4 flex gap-2">
                     <button
-                      onClick={() => onSelect(place)}
-                      disabled={!!removingPlace}
+                      onClick={() =>
+                        onSelect(place)
+                      }
+                      disabled={
+                        !!removingPlace
+                      }
                       className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-xs font-bold text-white transition duration-200 hover:bg-blue-600 active:scale-95 disabled:opacity-60"
                     >
                       <MapPin size={15} />
@@ -156,8 +175,12 @@ function Saved({
                     </button>
 
                     <button
-                      onClick={() => handleRemove(place)}
-                      disabled={!!removingPlace}
+                      onClick={() =>
+                        handleRemove(place)
+                      }
+                      disabled={
+                        !!removingPlace
+                      }
                       className="flex items-center justify-center gap-2 rounded-xl bg-gray-50 px-4 py-2.5 text-xs font-semibold text-gray-500 transition duration-200 hover:bg-red-50 hover:text-red-500 active:scale-95 disabled:cursor-wait dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                     >
                       <Trash2 size={15} />

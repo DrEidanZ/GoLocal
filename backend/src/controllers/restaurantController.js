@@ -1,13 +1,10 @@
-const {
-  fetchRestaurants,
-  addRestaurant,
-  editRestaurant,
-  removeRestaurant,
-} = require("./restaurant.service");
+const Restaurant = require("../models/Restaurant");
 
-const getRestaurants = (req, res) => {
+const getRestaurants = async (req, res) => {
   try {
-    const restaurants = fetchRestaurants();
+    const restaurants = await Restaurant.find()
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json(restaurants);
   } catch (error) {
@@ -19,7 +16,7 @@ const getRestaurants = (req, res) => {
   }
 };
 
-const createRestaurant = (req, res) => {
+const createRestaurant = async (req, res) => {
   try {
     const {
       name,
@@ -41,13 +38,14 @@ const createRestaurant = (req, res) => {
       });
     }
 
-    const restaurant = addRestaurant({
+    const restaurant = await Restaurant.create({
+      id: String(Date.now()),
       name,
-      description,
-      category,
-      latitude,
-      longitude,
-      logo,
+      description: description || "",
+      category: category || "Food",
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      logo: logo || "",
     });
 
     res.status(201).json({
@@ -63,7 +61,7 @@ const createRestaurant = (req, res) => {
   }
 };
 
-const updateRestaurant = (req, res) => {
+const updateRestaurant = async (req, res) => {
   try {
     const {
       name,
@@ -85,14 +83,21 @@ const updateRestaurant = (req, res) => {
       });
     }
 
-    const restaurant = editRestaurant(req.params.id, {
-      name,
-      description,
-      category,
-      latitude,
-      longitude,
-      logo,
-    });
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { id: req.params.id },
+      {
+        name,
+        description: description || "",
+        category: category || "Food",
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        logo: logo || "",
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).lean();
 
     if (!restaurant) {
       return res.status(404).json({
@@ -113,11 +118,13 @@ const updateRestaurant = (req, res) => {
   }
 };
 
-const deleteRestaurant = (req, res) => {
+const deleteRestaurant = async (req, res) => {
   try {
-    const deleted = removeRestaurant(req.params.id);
+    const restaurant = await Restaurant.findOneAndDelete({
+      id: req.params.id,
+    });
 
-    if (!deleted) {
+    if (!restaurant) {
       return res.status(404).json({
         message: "Restaurant not found.",
       });

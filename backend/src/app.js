@@ -1,10 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 
-const restaurantRoutes = require("./modules/restaurants/restaurant.routes");
-const userRoutes = require("./modules/users/user.routes");
-const authRoutes = require("./modules/auth/auth.routes");
-const orderRoutes = require("./modules/orders/order.routes");
+const restaurantRoutes = require("./routes/restaurantRoutes");
+const userRoutes = require("./routes/userRoutes");
+const authRoutes = require("./routes/authRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+
 const errorHandler = require("./middleware/error");
 
 const app = express();
@@ -18,10 +19,25 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/api/restaurants", restaurantRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/orders", orderRoutes);
+app.use(
+  "/api/restaurants",
+  restaurantRoutes
+);
+
+app.use(
+  "/api/users",
+  userRoutes
+);
+
+app.use(
+  "/api/auth",
+  authRoutes
+);
+
+app.use(
+  "/api/orders",
+  orderRoutes
+);
 
 app.use(errorHandler);
 
